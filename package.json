@@ -2,7 +2,7 @@
   "name": "ceely-quick-tag",
   "private": true,
   "scripts": {
-    "build": "remix vite:build && node generate-env.cjs && ng build",
+    "build": "remix vite:build && node generate-env.cjs",
     "dev": "shopify app dev",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
