@@ -1,0 +1,36 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "a2578056afc72f5aec95bf05808e9b36"
+application_url = "https://corresponding-tp-sv-llc.trycloudflare.com"
+embedded = true
+name = "ceely-quick-tag"
+handle = "ceely-quick-tag"
+
+[webhooks]
+api_version = "2025-01"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_locations,write_inventory,write_products"
+
+[auth]
+redirect_urls = [
+  "https://corresponding-tp-sv-llc.trycloudflare.com/auth/callback",
+  "https://corresponding-tp-sv-llc.trycloudflare.com/auth/shopify/callback",
+  "https://corresponding-tp-sv-llc.trycloudflare.com/api/auth/callback"
+]
+
+[pos]
+embedded = false
+
+[build]
+dev_store_url = "ceely-software-dev.myshopify.com"
+automatically_update_urls_on_dev = true
