@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "a2578056afc72f5aec95bf05808e9b36"
-application_url = "https://hunting-amy-designers-returning.trycloudflare.com"
+application_url = "https://andreas-cardiovascular-participating-formats.trycloudflare.com"
 embedded = true
 name = "ceely-quick-tag"
 handle = "ceely-quick-tag"
@@ -23,9 +23,9 @@ scopes = "read_locations,write_inventory,write_products"
 
 [auth]
 redirect_urls = [
-  "https://hunting-amy-designers-returning.trycloudflare.com/auth/callback",
-  "https://hunting-amy-designers-returning.trycloudflare.com/auth/shopify/callback",
-  "https://hunting-amy-designers-returning.trycloudflare.com/api/auth/callback"
+  "https://andreas-cardiovascular-participating-formats.trycloudflare.com/auth/callback",
+  "https://andreas-cardiovascular-participating-formats.trycloudflare.com/auth/shopify/callback",
+  "https://andreas-cardiovascular-participating-formats.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

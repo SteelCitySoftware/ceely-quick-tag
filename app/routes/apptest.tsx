@@ -187,7 +187,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Index() {
-  const fetcher = useFetcher<typeof action>();
+  const [requestQueue, setRequestQueue] = useState([]); // Queue of requests
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false); // Flag for processing state
+  const fetcher = useFetcher();
   const [barcode, setBarcode] = useState("");
   const [tag, setTag] = useState("");
   const [results, setResults] = useState([]);
@@ -199,25 +201,74 @@ export default function Index() {
     setUniqueProductCount(0);
   };
 
+  // Add a request to the queue
+  const enqueueRequest = (data, options) => {
+    setRequestQueue((prevQueue) => [
+      ...prevQueue,
+      { data: { ...data }, options: { ...options } },
+    ]);
+  };
+  // Process the queue sequentially
+  const processQueue = async () => {
+    if (isProcessingQueue || requestQueue.length === 0) return; // Prevent double-triggering
+    setIsProcessingQueue(true);
+
+    while (requestQueue.length > 0) {
+      const [currentRequest, ...remainingQueue] = requestQueue;
+
+      try {
+        console.log("Processing request:", currentRequest);
+
+        // Submit the current request
+        fetcher.submit(
+          { ...currentRequest.data }, // Clone the data to avoid reuse issues
+          { ...currentRequest.options },
+        );
+
+        // Wait for fetcher to complete processing
+        await new Promise((resolve) => {
+          const interval = setInterval(() => {
+            if (fetcher.state === "idle") {
+              clearInterval(interval);
+              resolve();
+            }
+          }, 100);
+        });
+
+        console.log("Request processed successfully:", currentRequest);
+      } catch (error) {
+        console.error("Error processing request:", error);
+      }
+
+      // Remove the processed request from the queue
+      setRequestQueue(remainingQueue);
+    }
+
+    setIsProcessingQueue(false);
+  };
+
+  // Trigger processing when the queue updates
+  useEffect(() => {
+    if (!isProcessingQueue && requestQueue.length > 0) {
+      processQueue();
+    }
+  }, [requestQueue]);
+
+  // Handlers for various actions
   const handleSubmit = () => {
-    fetcher.submit({ barcode, tag }, { method: "POST" });
-    setBarcode("");
+    enqueueRequest(
+      { barcode, tag }, // Data
+      { method: "POST" }, // Options
+    );
+    setBarcode(""); // Clear the input
   };
 
   const handleDeleteTag = (productId, tagToDelete) => {
-    fetcher.submit({ productId, deleteTag: tagToDelete }, { method: "POST" });
-    setTagStatus((prev) => ({
-      ...prev,
-      [tagToDelete]: "Deleted",
-    }));
+    enqueueRequest({ productId, deleteTag: tagToDelete }, { method: "POST" });
   };
 
   const handleAddTag = (productId, tagToAdd) => {
-    fetcher.submit({ productId, addTag: tagToAdd }, { method: "POST" });
-    setTagStatus((prev) => ({
-      ...prev,
-      [tagToAdd]: "Added Back",
-    }));
+    enqueueRequest({ productId, addTag: tagToAdd }, { method: "POST" });
   };
 
   const playFailureSound = () => {
@@ -351,14 +402,14 @@ export default function Index() {
                 <TextField
                   label="Tag"
                   value={tag}
-                  onChange={setTag}
+                  onChange={(value) => setTag(value)}
                   autoComplete="off"
                 />
                 <TextField
                   type="text"
                   label="Barcode Search"
                   value={barcode}
-                  onChange={setBarcode}
+                  onChange={(value) => setBarcode(value)}
                   autoComplete="off"
                 />
                 <Button submit loading={isLoading} primary>
@@ -369,6 +420,14 @@ export default function Index() {
                 </Button>
               </Form>
             </BlockStack>
+          </Card>
+        </Layout.Section>
+        <Layout.Section>
+          <Card title="Queue Status">
+            <Text>
+              Requests in Queue: {requestQueue.length} | Processing:{" "}
+              {isProcessingQueue ? "Yes" : "No"}
+            </Text>
           </Card>
         </Layout.Section>
         <Layout.Section>
