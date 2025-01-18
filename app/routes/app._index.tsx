@@ -194,10 +194,8 @@ export default function Index() {
   const [results, setResults] = useState([]);
   const isLoading = ["loading", "submitting"].includes(fetcher.state);
   const [tagStatus, setTagStatus] = useState({});
-  const [uniqueProductCount, setUniqueProductCount] = useState(0);
   const handleReset = () => {
     setResults([]);
-    setUniqueProductCount(0);
   };
 
   const handleSubmit = () => {
@@ -232,12 +230,12 @@ export default function Index() {
 
   useEffect(() => {
     if (fetcher.data) {
+      const timestamp = new Date().toISOString(); // Generate a timestamp
       setResults((prevResults) => {
         // If success is false, always add a new entry
         if (!fetcher.data.success) {
-          return [fetcher.data, ...prevResults];
+          return [{ ...fetcher.data, timestamp }, ...prevResults];
         }
-
         // For successful results, update the existing entry or add a new one
         const existingIndex = prevResults.findIndex(
           (result) =>
@@ -247,11 +245,11 @@ export default function Index() {
 
         if (existingIndex !== -1) {
           const updatedResults = [...prevResults];
-          updatedResults[existingIndex] = fetcher.data;
+          updatedResults[existingIndex] = { ...fetcher.data, timestamp };
           return updatedResults;
         }
 
-        return [fetcher.data, ...prevResults];
+        return [{ ...fetcher.data, timestamp }, ...prevResults];
       });
 
       // Play the appropriate sound
@@ -285,10 +283,12 @@ export default function Index() {
             {result.success ? "Success" : "Failure"}
           </Text>,
           result.tag || "N/A",
+          new Date(result.timestamp).toLocaleString(), // Display timestamp
           result.products.map((product) => (
             <div key={product.title}>
               <div>
-                <strong>{product.title}</strong> Total Inventory:{" "}
+                <strong>{product.title}</strong> Total Inventory:
+                {results.length}
                 <strong>{product.totalInventory}</strong>
               </div>
               <ul>
@@ -375,14 +375,14 @@ export default function Index() {
         </Layout.Section>
         <Layout.Section>
           <Card title="Summary">
-            <Text>Total Unique Products Added: {uniqueProductCount}</Text>
+            <Text>Total Unique Products Scanned: {results.length}</Text>
           </Card>
         </Layout.Section>
         <Layout.Section>
           <Card title="Results">
             <DataTable
               columnContentTypes={["text", "text", "text"]}
-              headings={["Status", "Tag Used", "Products"]}
+              headings={["Status", "Tag Used", "Scanned On", "Products"]}
               rows={rows}
             />
           </Card>
