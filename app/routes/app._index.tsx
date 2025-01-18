@@ -12,6 +12,7 @@ import {
   BlockStack,
   DataTable,
   Icon,
+  Tooltip,
 } from "@shopify/polaris";
 import { PlusIcon, DeleteIcon } from "@shopify/polaris-icons";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
@@ -216,7 +217,7 @@ export default function Index() {
     fetcher.submit({ productId, addTag: tagToAdd }, { method: "POST" });
     setTagStatus((prev) => ({
       ...prev,
-      [tagToAdd]: "Added Back",
+      [tagToAdd]: "Readded",
     }));
   };
 
@@ -308,9 +309,10 @@ export default function Index() {
                   <summary>View Tags</summary>
                   <DataTable
                     columnContentTypes={["text", "text"]}
-                    headings={["Tag", "Action"]}
+                    headings={["Tag", "Status", "Action"]}
                     rows={product.tags.map((tag) => [
                       tag,
+                      <i>{tagStatus[tag] || "Existing"}</i>,
                       <div>
                         <Button
                           icon={DeleteIcon}
@@ -321,15 +323,15 @@ export default function Index() {
                           Delete
                         </Button>
                         <Button
+                          tone="critical"
                           icon={PlusIcon}
                           onClick={() => handleAddTag(product.id, tag)}
                           plain
-                          disabled={tagStatus[tag] !== "Deleted"}
+                          disabled={tagStatus[tag] != "Deleted"}
                         >
                           Add Back
                         </Button>
                       </div>,
-                      tagStatus[tag] || "", // Show status (Adding, Deleting, Success, Failure)
                     ])}
                   />
                 </details>
