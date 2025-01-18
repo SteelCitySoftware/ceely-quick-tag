@@ -190,6 +190,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Index() {
   const fetcher = useFetcher<typeof action>();
   const [barcode, setBarcode] = useState("");
+  const [lastBarcode, setLastBarcode] = useState("");
   const [tag, setTag] = useState("");
   const [results, setResults] = useState([]);
   const isLoading = ["loading", "submitting"].includes(fetcher.state);
@@ -200,6 +201,7 @@ export default function Index() {
 
   const handleSubmit = () => {
     fetcher.submit({ barcode, tag }, { method: "POST" });
+    setLastBarcode(barcode);
     setBarcode("");
   };
 
@@ -231,11 +233,46 @@ export default function Index() {
   useEffect(() => {
     if (fetcher.data) {
       const timestamp = new Date().toISOString(); // Generate a timestamp
+      let scannedVariantInventory = 0;
+
+      console.log("Fetcher Data:", fetcher.data); // Debug: log the fetched data
+      console.log("Scanned Barcode:", lastBarcode); // Debug: log the barcode
+
+      // Ensure products and variants exist in the fetched data
+      if (fetcher.data.products && fetcher.data.products.length > 0) {
+        const product = fetcher.data.products[0];
+        console.log("Product Found:", product); // Debug: log the product data
+
+        const matchedVariant = product.variants.find(
+          (variant) => variant.barcode === lastBarcode,
+        );
+
+        // Log matched variant or absence
+        if (matchedVariant) {
+          console.log("Matched Variant:", matchedVariant);
+          scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
+        } else {
+          console.log("No matching variant found for barcode:", barcode);
+        }
+      } else {
+        console.log("No products found in fetcher data.");
+      }
+
+      // Play the failure sound if inventory is 0 or less
+      if (scannedVariantInventory <= 0) {
+        playFailureSound();
+      } else if (!fetcher.data.success) {
+        playFailureSound();
+      } else {
+        playSuccessSound();
+      }
+
       setResults((prevResults) => {
-        // If success is false, always add a new entry
+        // If success is false, always add a new entry with timestamp
         if (!fetcher.data.success) {
           return [{ ...fetcher.data, timestamp }, ...prevResults];
         }
+
         // For successful results, update the existing entry or add a new one
         const existingIndex = prevResults.findIndex(
           (result) =>
@@ -251,13 +288,6 @@ export default function Index() {
 
         return [{ ...fetcher.data, timestamp }, ...prevResults];
       });
-
-      // Play the appropriate sound
-      if (!fetcher.data.success) {
-        playFailureSound();
-      } else {
-        playSuccessSound();
-      }
 
       // Update tag status
       if (fetcher.data.success && fetcher.data.tag) {
@@ -288,7 +318,6 @@ export default function Index() {
             <div key={product.title}>
               <div>
                 <strong>{product.title}</strong> Total Inventory:
-                {results.length}
                 <strong>{product.totalInventory}</strong>
               </div>
               <ul>
