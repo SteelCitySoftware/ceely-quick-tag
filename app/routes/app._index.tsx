@@ -14,7 +14,13 @@ import {
   Icon,
   Tooltip,
 } from "@shopify/polaris";
-import { PlusIcon, DeleteIcon } from "@shopify/polaris-icons";
+import {
+  ProductIcon,
+  PlusIcon,
+  DeleteIcon,
+  SearchListIcon,
+  BarcodeIcon,
+} from "@shopify/polaris-icons";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import successSound from "./sounds/success.mp3"; // Add your failure sound file in the correct directory
@@ -104,6 +110,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             edges {
               node {
                 id
+                status
                 title
                 tags
                 totalInventory
@@ -193,11 +200,18 @@ export default function Index() {
   const [lastBarcode, setLastBarcode] = useState("");
   const [tag, setTag] = useState("");
   const [results, setResults] = useState([]);
+  //TODO: pullstoreurl from graphql
+  const [storeUrl, setStoreUrl] = useState(
+    "https://ceely-software-dev.myshopify.com",
+  );
   const isLoading = ["loading", "submitting"].includes(fetcher.state);
   const [tagStatus, setTagStatus] = useState({});
   const handleReset = () => {
     setResults([]);
   };
+
+  const adminUrl = storeUrl + "/admin";
+  const productUrl = adminUrl + "/products";
 
   const handleSubmit = () => {
     fetcher.submit({ barcode, tag }, { method: "POST" });
@@ -209,7 +223,10 @@ export default function Index() {
     fetcher.submit({ productId, deleteTag: tagToDelete }, { method: "POST" });
     setTagStatus((prev) => ({
       ...prev,
-      [tagToDelete]: "Deleted",
+      [productId]: {
+        ...prev[productId],
+        [tagToDelete]: "Deleted",
+      },
     }));
   };
 
@@ -217,7 +234,10 @@ export default function Index() {
     fetcher.submit({ productId, addTag: tagToAdd }, { method: "POST" });
     setTagStatus((prev) => ({
       ...prev,
-      [tagToAdd]: "Readded",
+      [productId]: {
+        ...prev[productId],
+        [tagToAdd]: "Readded",
+      },
     }));
   };
 
@@ -228,6 +248,15 @@ export default function Index() {
   const playSuccessSound = () => {
     const audio = new Audio(successSound);
     audio.play();
+  };
+
+  const speakText = (text) => {
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.error("Speech synthesis is not supported in this browser.");
+    }
   };
 
   useEffect(() => {
@@ -251,20 +280,28 @@ export default function Index() {
         if (matchedVariant) {
           console.log("Matched Variant:", matchedVariant);
           scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
+
+          // Play the failure sound if inventory is 0 or less
+          if (!fetcher.data.success) {
+            playFailureSound();
+            speakText(`not found`);
+          } else if (scannedVariantInventory <= 0) {
+            playFailureSound();
+            speakText(`no inventory`);
+          } else {
+            playSuccessSound();
+            speakText(`${scannedVariantInventory}`);
+          }
         } else {
           console.log("No matching variant found for barcode:", barcode);
         }
       } else {
+        if (fetcher.data.success) {
+          playSuccessSound();
+        } else {
+          playFailureSound();
+        }
         console.log("No products found in fetcher data.");
-      }
-
-      // Play the failure sound if inventory is 0 or less
-      if (scannedVariantInventory <= 0) {
-        playFailureSound();
-      } else if (!fetcher.data.success) {
-        playFailureSound();
-      } else {
-        playSuccessSound();
       }
 
       setResults((prevResults) => {
@@ -327,8 +364,9 @@ export default function Index() {
                     {variant.title == "Default Title"
                       ? product.title
                       : variant.title}{" "}
+                    <br />
                     <strong>Barcode:</strong> {variant.barcode || "N/A"},{" "}
-                    <strong>SKU:</strong> {variant.sku},{" "}
+                    <strong>SKU:</strong> {variant.sku}, <br />
                     <strong>Quantity:</strong> {variant.inventoryQuantity}
                   </li>
                 ))}
@@ -341,13 +379,32 @@ export default function Index() {
                     headings={["Tag", "Status", "Action"]}
                     rows={product.tags.map((tag) => [
                       tag,
-                      <i>{tagStatus[tag] || "Existing"}</i>,
+                      <i>
+                        {(tagStatus[product.id] &&
+                          tagStatus[product.id][tag]) ||
+                          "Existing"}
+                      </i>,
                       <div>
+                        <Button
+                          icon={SearchListIcon}
+                          onClick={() => {
+                            if (tag) {
+                              window.open(
+                                `${productUrl}?tag=${encodeURIComponent(tag)}`,
+                                "_blank",
+                              );
+                            }
+                          }}
+                          disabled={!tag}
+                        ></Button>
                         <Button
                           icon={DeleteIcon}
                           onClick={() => handleDeleteTag(product.id, tag)}
                           plain
-                          disabled={tagStatus[tag] === "Deleted"}
+                          disabled={
+                            tagStatus[product.id] &&
+                            tagStatus[product.id][tag] === "Deleted"
+                          }
                         >
                           Delete
                         </Button>
@@ -356,7 +413,12 @@ export default function Index() {
                           icon={PlusIcon}
                           onClick={() => handleAddTag(product.id, tag)}
                           plain
-                          disabled={tagStatus[tag] != "Deleted"}
+                          disabled={
+                            !(
+                              tagStatus[product.id] &&
+                              tagStatus[product.id][tag] === "Deleted"
+                            )
+                          }
                         >
                           Add Back
                         </Button>
@@ -380,12 +442,26 @@ export default function Index() {
             <BlockStack gap="500">
               <Form onSubmit={handleSubmit}>
                 <TextField
+                  prefix={<Icon source={ProductIcon} />}
                   label="Tag"
                   value={tag}
                   onChange={setTag}
                   autoComplete="off"
-                />
+                />{" "}
+                <Button
+                  icon={SearchListIcon}
+                  onClick={() => {
+                    if (tag) {
+                      window.open(
+                        `${productUrl}?tag=${encodeURIComponent(tag)}`,
+                        "_blank",
+                      );
+                    }
+                  }}
+                  disabled={!tag}
+                ></Button>
                 <TextField
+                  prefix={<Icon source={BarcodeIcon} />}
                   type="text"
                   label="Barcode Search"
                   value={barcode}
