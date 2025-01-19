@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "a2578056afc72f5aec95bf05808e9b36"
-application_url = "https://nano-breed-practical-lion.trycloudflare.com"
+application_url = "https://font-powers-relying-possession.trycloudflare.com"
 embedded = true
 name = "ceely-quick-tag"
 handle = "ceely-quick-tag"
@@ -23,9 +23,9 @@ scopes = "read_locations,write_inventory,write_products"
 
 [auth]
 redirect_urls = [
-  "https://nano-breed-practical-lion.trycloudflare.com/auth/callback",
-  "https://nano-breed-practical-lion.trycloudflare.com/auth/shopify/callback",
-  "https://nano-breed-practical-lion.trycloudflare.com/api/auth/callback"
+  "https://font-powers-relying-possession.trycloudflare.com/auth/callback",
+  "https://font-powers-relying-possession.trycloudflare.com/auth/shopify/callback",
+  "https://font-powers-relying-possession.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
