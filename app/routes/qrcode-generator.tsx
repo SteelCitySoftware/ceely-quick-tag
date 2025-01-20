@@ -22,17 +22,20 @@ const QRCodeGenerator: React.FC = () => {
       if (printWindow) {
         printWindow.document.write("<html><head><title>QR Codes</title>");
         printWindow.document.write(
-          "<style>body { font-family: Arial, sans-serif; text-align: center; }</style>",
+          "<style>body { font-family: Arial, sans-serif; text-align: center; } .qr-code-grid { display: grid; grid-template-columns: repeat(" +
+            qrCodesPerRow +
+            ", 1fr); gap: 20px; } .qr-code-item { text-align: center; } .qr-code-item p { margin: 0 auto; width: fit-content; text-align: center; overflow: visible; white-space: normal; }</style>",
         );
         printWindow.document.write("</head><body>");
         printWindow.document.write(printRef.current.outerHTML);
-        printWindow.document.write("</body></html>");
         printWindow.document.close();
         printWindow.focus();
         printWindow.print();
       }
     }
   };
+
+  const qrCodeSize = Math.floor(1000 / qrCodesPerRow) - 20; // Adjust size based on number of columns
 
   return (
     <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
@@ -116,6 +119,7 @@ const QRCodeGenerator: React.FC = () => {
           <div ref={printRef} style={{ marginTop: "30px" }}>
             <h2>Generated QR Codes</h2>
             <div
+              className="qr-code-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: `repeat(${qrCodesPerRow}, 1fr)`,
@@ -123,15 +127,28 @@ const QRCodeGenerator: React.FC = () => {
               }}
             >
               {generatedTags.map((tag, index) => (
-                <div key={index} style={{ textAlign: "center" }}>
+                <div
+                  className="qr-code-item"
+                  key={index}
+                  style={{ textAlign: "center" }}
+                >
                   <a
                     href={`${urlPrefix}${tag}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <QRCodeSVG value={`${urlPrefix}${tag}`} size={150} />
+                    <QRCodeSVG value={`${urlPrefix}${tag}`} size={qrCodeSize} />
                   </a>
-                  <p style={{ marginTop: "10px" }}>{tag}</p>
+                  <p
+                    style={{
+                      marginTop: "10px",
+                      width: "fit-content",
+                      margin: "0 auto",
+                      textAlign: "center",
+                    }}
+                  >
+                    {tag}
+                  </p>
                 </div>
               ))}
             </div>
