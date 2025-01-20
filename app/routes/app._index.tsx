@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { useFetcher } from "@remix-run/react";
+import { useFetcher, Link } from "@remix-run/react";
 import {
   Page,
   Form,
@@ -12,16 +12,16 @@ import {
   BlockStack,
   DataTable,
   Icon,
-  Tooltip,
 } from "@shopify/polaris";
 import {
   ProductIcon,
   PlusIcon,
   DeleteIcon,
   SearchListIcon,
+  SearchIcon,
   BarcodeIcon,
 } from "@shopify/polaris-icons";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
+import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import successSound from "./sounds/success.mp3"; // Add your failure sound file in the correct directory
 import failureSound from "./sounds/failure.mp3"; // Add your failure sound file in the correct directory
@@ -43,6 +43,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const result = {
     success: false,
     tag,
+    storeUrl: "",
     products: [],
     error: null,
   };
@@ -102,11 +103,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         result.success = true;
       }
     } else {
+      // Fetch the store URL
+
+      //possibly verify if the request has been complete already so it doesn't pull it multiple times for no reason.
+      const storeResponse = await admin.graphql(
+        `#graphql
+            query adminInfo {
+              shop {
+                url
+              }
+            }`,
+      );
+
+      const storeData = await storeResponse.json();
+      result.storeUrl = storeData.data.shop.url;
+
       // Search for the product by barcode
       const searchResponse = await admin.graphql(
         `#graphql
         query searchProductsByBarcode($queryString: String) {
-          products(first: 1, query: $queryString) {
+          products(first: 250, query: $queryString) {
             edges {
               node {
                 id
@@ -114,7 +130,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 title
                 tags
                 totalInventory
-                variants(first: 5) {
+                variants(first: 250) {
                   edges {
                     node {
                       title
@@ -200,18 +216,11 @@ export default function Index() {
   const [lastBarcode, setLastBarcode] = useState("");
   const [tag, setTag] = useState("");
   const [results, setResults] = useState([]);
-  //TODO: pullstoreurl from graphql
-  const [storeUrl, setStoreUrl] = useState(
-    "https://ceely-software-dev.myshopify.com",
-  );
   const isLoading = ["loading", "submitting"].includes(fetcher.state);
   const [tagStatus, setTagStatus] = useState({});
   const handleReset = () => {
     setResults([]);
   };
-
-  const adminUrl = storeUrl + "/admin";
-  const productUrl = adminUrl + "/products";
 
   const handleSubmit = () => {
     fetcher.submit({ barcode, tag }, { method: "POST" });
@@ -266,34 +275,43 @@ export default function Index() {
 
       console.log("Fetcher Data:", fetcher.data); // Debug: log the fetched data
       console.log("Scanned Barcode:", lastBarcode); // Debug: log the barcode
-
       // Ensure products and variants exist in the fetched data
       if (fetcher.data.products && fetcher.data.products.length > 0) {
-        const product = fetcher.data.products[0];
-        console.log("Product Found:", product); // Debug: log the product data
+        let variantFound = false;
 
-        const matchedVariant = product.variants.find(
-          (variant) => variant.barcode === lastBarcode,
-        );
+        // Iterate over all products
+        fetcher.data.products.forEach((product) => {
+          console.log("Product Found:", product); // Debug: log the product data
 
-        // Log matched variant or absence
-        if (matchedVariant) {
-          console.log("Matched Variant:", matchedVariant);
-          scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
+          const matchedVariant = product.variants.find(
+            (variant) => variant.barcode === lastBarcode,
+          );
 
-          // Play the failure sound if inventory is 0 or less
-          if (!fetcher.data.success) {
-            playFailureSound();
-            speakText(`not found`);
-          } else if (scannedVariantInventory <= 0) {
-            playFailureSound();
-            speakText(`no inventory`);
-          } else {
-            playSuccessSound();
-            speakText(`${scannedVariantInventory}`);
+          // Process matched variant if found
+          if (matchedVariant) {
+            console.log("Matched Variant:", matchedVariant);
+            scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
+
+            // Play the failure sound if inventory is 0 or less
+            if (!fetcher.data.success) {
+              playFailureSound();
+              speakText(`not found`);
+            } else if (scannedVariantInventory <= 0) {
+              playFailureSound();
+              speakText(`no inventory`);
+            } else {
+              playSuccessSound();
+              speakText(`${scannedVariantInventory}`);
+            }
+
+            variantFound = true; // Mark that a matching variant was found
           }
-        } else {
-          console.log("No matching variant found for barcode:", barcode);
+        });
+
+        if (!variantFound) {
+          console.log("No matching variant found for barcode:", lastBarcode);
+          playFailureSound();
+          speakText(`not found`);
         }
       } else {
         if (fetcher.data.success) {
@@ -354,6 +372,15 @@ export default function Index() {
           result.products.map((product) => (
             <div key={product.title}>
               <div>
+                <Button
+                  icon={SearchIcon}
+                  onClick={() =>
+                    window.open(
+                      `${fetcher.data?.storeUrl}/admin/products/${product.id.split("/").pop()}`,
+                      "_blank",
+                    )
+                  }
+                ></Button>
                 <strong>{product.title}</strong> Total Inventory:
                 <strong>{product.totalInventory}</strong>
               </div>
@@ -390,7 +417,7 @@ export default function Index() {
                           onClick={() => {
                             if (tag) {
                               window.open(
-                                `${productUrl}?tag=${encodeURIComponent(tag)}`,
+                                `${fetcher.data?.storeUrl}/admin/products/?tag=${encodeURIComponent(tag)}`,
                                 "_blank",
                               );
                             }
@@ -436,6 +463,7 @@ export default function Index() {
   return (
     <Page>
       <TitleBar title="Ceely Quick Tag" />
+      <div>{fetcher.data?.storeUrl}</div>
       <Layout>
         <Layout.Section>
           <Card>
@@ -448,18 +476,18 @@ export default function Index() {
                   onChange={setTag}
                   autoComplete="off"
                 />{" "}
-                <Button
+                {/*                 <Button
                   icon={SearchListIcon}
                   onClick={() => {
                     if (tag) {
                       window.open(
-                        `${productUrl}?tag=${encodeURIComponent(tag)}`,
+                        `${fetcher.data?.storeUrl}}/admin/products?tag=${encodeURIComponent(tag)}`,
                         "_blank",
                       );
                     }
                   }}
                   disabled={!tag}
-                ></Button>
+                ></Button> */}
                 <TextField
                   prefix={<Icon source={BarcodeIcon} />}
                   type="text"

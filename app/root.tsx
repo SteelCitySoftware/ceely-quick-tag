@@ -5,6 +5,19 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
+import { AppProvider } from "@shopify/polaris";
+import "@shopify/polaris/build/esm/styles.css";
+
+const i18n = {
+  en: {
+    Polaris: {
+      Common: {
+        yes: "Yes",
+        no: "No",
+      },
+    },
+  },
+};
 
 export default function App() {
   return (
@@ -21,7 +34,9 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <Outlet />
+        <AppProvider i18n={i18n}>
+          <Outlet />
+        </AppProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
