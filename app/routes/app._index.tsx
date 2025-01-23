@@ -218,11 +218,43 @@ export default function Index() {
   const [results, setResults] = useState([]);
   const isLoading = ["loading", "submitting"].includes(fetcher.state);
   const [tagStatus, setTagStatus] = useState({});
+
+  function replaceCharacters(input: string): string {
+    return input.replace(/:/g, " ").replace(/-/g, " dash, ");
+  }
+
   const handleReset = () => {
     setResults([]);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    if (barcode.trim()) {
+      try {
+        const url = new URL(barcode);
+        const params = new URLSearchParams(url.search);
+        const tagName = params.get("tag");
+
+        if (tagName) {
+          setTag(tagName);
+          const tagSpeak = replaceCharacters(tagName);
+          speakText(`Tag Set to ${tagSpeak}`);
+          setResults([]);
+          setBarcode(""); // Clear the barcode field
+          document.getElementById("barcodeField").focus;
+          return;
+        }
+      } catch (error) {
+        // Not a valid URL, proceed as usual
+      }
+    } else if (!barcode.trim() || !tag.trim()) {
+      alert("Both Tag and Barcode fields must be filled.");
+      return;
+    }
+
+    // Detect if the barcode is a URL
+
     fetcher.submit({ barcode, tag }, { method: "POST" });
     setLastBarcode(barcode);
     setBarcode("");
@@ -249,7 +281,6 @@ export default function Index() {
       },
     }));
   };
-
   const playFailureSound = () => {
     const audio = new Audio(failureSound);
     audio.play();
@@ -269,30 +300,39 @@ export default function Index() {
   };
 
   useEffect(() => {
+    const handleFocusChange = (event) => {
+      const focusedElement = document.activeElement;
+      const tagField = document.getElementById("tag");
+      const barcodeField = document.getElementById("barcodeField");
+
+      if (focusedElement !== tagField && focusedElement !== barcodeField) {
+        barcodeField?.focus();
+      }
+    };
+
+    document.addEventListener("focusin", handleFocusChange);
+
+    return () => {
+      document.removeEventListener("focusin", handleFocusChange);
+    };
+  }, []);
+
+  useEffect(() => {
     if (fetcher.data) {
       const timestamp = new Date().toISOString(); // Generate a timestamp
       let scannedVariantInventory = 0;
 
-      console.log("Fetcher Data:", fetcher.data); // Debug: log the fetched data
-      console.log("Scanned Barcode:", lastBarcode); // Debug: log the barcode
-      // Ensure products and variants exist in the fetched data
       if (fetcher.data.products && fetcher.data.products.length > 0) {
         let variantFound = false;
 
-        // Iterate over all products
         fetcher.data.products.forEach((product) => {
-          console.log("Product Found:", product); // Debug: log the product data
-
           const matchedVariant = product.variants.find(
             (variant) => variant.barcode === lastBarcode,
           );
 
-          // Process matched variant if found
           if (matchedVariant) {
-            console.log("Matched Variant:", matchedVariant);
             scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
 
-            // Play the failure sound if inventory is 0 or less
             if (!fetcher.data.success) {
               playFailureSound();
               speakText(`not found`);
@@ -304,12 +344,11 @@ export default function Index() {
               speakText(`${scannedVariantInventory}`);
             }
 
-            variantFound = true; // Mark that a matching variant was found
+            variantFound = true;
           }
         });
 
         if (!variantFound) {
-          console.log("No matching variant found for barcode:", lastBarcode);
           playFailureSound();
           speakText(`not found`);
         }
@@ -319,16 +358,13 @@ export default function Index() {
         } else {
           playFailureSound();
         }
-        console.log("No products found in fetcher data.");
       }
 
       setResults((prevResults) => {
-        // If success is false, always add a new entry with timestamp
         if (!fetcher.data.success) {
           return [{ ...fetcher.data, timestamp }, ...prevResults];
         }
 
-        // For successful results, update the existing entry or add a new one
         const existingIndex = prevResults.findIndex(
           (result) =>
             result.products[0]?.id === fetcher.data.products[0]?.id &&
@@ -344,7 +380,6 @@ export default function Index() {
         return [{ ...fetcher.data, timestamp }, ...prevResults];
       });
 
-      // Update tag status
       if (fetcher.data.success && fetcher.data.tag) {
         setTagStatus((prev) => ({
           ...prev,
@@ -464,6 +499,7 @@ export default function Index() {
     <Page>
       <TitleBar title="Ceely Quick Tag" />
       <div>{fetcher.data?.storeUrl}</div>
+
       <Layout>
         <Layout.Section>
           <Card>
@@ -487,8 +523,9 @@ export default function Index() {
                     }
                   }}
                   disabled={!tag}
-                ></Button> */}
+                ></Button> */}{" "}
                 <TextField
+                  id="barcodeField"
                   prefix={<Icon source={BarcodeIcon} />}
                   type="text"
                   label="Barcode Search"

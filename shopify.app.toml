@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "a2578056afc72f5aec95bf05808e9b36"
-application_url = "https://everywhere-bored-kids-verbal.trycloudflare.com"
+application_url = "https://call-hung-torture-regime.trycloudflare.com"
 embedded = true
 name = "ceely-quick-tag"
 handle = "ceely-quick-tag"
@@ -23,9 +23,9 @@ scopes = "read_locations,write_inventory,write_products"
 
 [auth]
 redirect_urls = [
-  "https://everywhere-bored-kids-verbal.trycloudflare.com/auth/callback",
-  "https://everywhere-bored-kids-verbal.trycloudflare.com/auth/shopify/callback",
-  "https://everywhere-bored-kids-verbal.trycloudflare.com/api/auth/callback"
+  "https://call-hung-torture-regime.trycloudflare.com/auth/callback",
+  "https://call-hung-torture-regime.trycloudflare.com/auth/shopify/callback",
+  "https://call-hung-torture-regime.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
