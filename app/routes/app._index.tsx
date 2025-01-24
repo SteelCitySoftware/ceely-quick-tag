@@ -26,10 +26,17 @@ import { authenticate } from "../shopify.server";
 import successSound from "./sounds/success.mp3"; // Add your failure sound file in the correct directory
 import failureSound from "./sounds/failure.mp3"; // Add your failure sound file in the correct directory
 
+//custom imports
+import useFocusManagement from "../hooks/useFocusManagement";
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
   return null;
 };
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -223,6 +230,8 @@ export default function Index() {
     return input.replace(/:/g, " ").replace(/-/g, " dash, ");
   }
 
+  useFocusManagement();
+
   const handleReset = () => {
     setResults([]);
   };
@@ -299,12 +308,12 @@ export default function Index() {
     }
   };
 
-  useEffect(() => {
+  /*   useEffect(() => {
     const handleFocusChange = (event) => {
+      sleep(2000);
       const focusedElement = document.activeElement;
       const tagField = document.getElementById("tag");
       const barcodeField = document.getElementById("barcodeField");
-
       if (focusedElement !== tagField && focusedElement !== barcodeField) {
         barcodeField?.focus();
       }
@@ -315,7 +324,7 @@ export default function Index() {
     return () => {
       document.removeEventListener("focusin", handleFocusChange);
     };
-  }, []);
+  }, []); */
 
   useEffect(() => {
     if (fetcher.data) {
@@ -506,6 +515,7 @@ export default function Index() {
             <BlockStack gap="500">
               <Form onSubmit={handleSubmit}>
                 <TextField
+                  id="tagField"
                   prefix={<Icon source={ProductIcon} />}
                   label="Tag"
                   value={tag}
