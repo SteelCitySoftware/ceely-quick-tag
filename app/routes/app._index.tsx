@@ -484,7 +484,8 @@ export default function Index() {
                     <br />
                     <strong>Barcode:</strong> {variant.barcode || "N/A"},{" "}
                     <strong>SKU:</strong> {variant.sku}, <br />
-                    <strong>Quantity:</strong> {variant.inventoryQuantity}
+                    <strong>Quantity:</strong> {variant.inventoryQuantity}{" "}
+                    <br />
                     <strong>Expiration Dates:</strong>
                     <ul>
                       {variant.expirationDisplay?.map((exp, index) => (
