@@ -1,4 +1,6 @@
 import { Link } from "@remix-run/react";
+import TagVerified from "../routes/tag-verified";
+import TagSearch from "../routes/actions/tag-search";
 
 const Index: React.FC = () => {
   return (
@@ -20,5 +22,7 @@ const Index: React.FC = () => {
     </div>
   );
 };
+
+export { TagVerified, TagSearch };
 
 export default Index;

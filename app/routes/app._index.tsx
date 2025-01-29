@@ -144,6 +144,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                       barcode
                       sku
                       inventoryQuantity
+                      expiration_json: metafield(namespace: "expiration_dates", key: "allocations") {
+                          value
+                     } 
                     }
                   }
                 }
@@ -342,6 +345,49 @@ export default function Index() {
           if (matchedVariant) {
             scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
 
+            if (fetcher.data.success) {
+              fetcher.data.products.forEach((product) => {
+                product.variants.forEach((variant) => {
+                  if (variant.expiration_json?.value) {
+                    const expirationData = JSON.parse(
+                      variant.expiration_json.value,
+                    );
+                    variant.expirationDisplay = expirationData.map((exp) => {
+                      const expirationDate = new Date(exp.time);
+                      const today = new Date();
+                      const daysUntilExpiration = Math.ceil(
+                        (expirationDate - today) / (1000 * 60 * 60 * 24),
+                      );
+
+                      let color = "black"; // Default color
+                      let expirationMessage = `A batch expires in ${daysUntilExpiration} days`;
+
+                      if (daysUntilExpiration < 0) {
+                        color = "red"; // Expired
+                        expirationMessage = `A batch expired ${Math.abs(daysUntilExpiration)} days ago`;
+                      } else if (daysUntilExpiration <= 40) {
+                        color = "orange"; // Expiring soon
+                      }
+
+                      console.log(
+                        `Expiration Date: ${expirationDate.toLocaleDateString()} - Days Until Expiration: ${daysUntilExpiration} - Color: ${color}`,
+                      );
+                      speakText(expirationMessage);
+
+                      return {
+                        date: expirationDate.toLocaleDateString(),
+                        color,
+                      };
+                    });
+                  } else {
+                    variant.expirationDisplay = [
+                      { date: "No Expiration Data", color: "black" },
+                    ];
+                  }
+                });
+              });
+            }
+
             if (!fetcher.data.success) {
               playFailureSound();
               speakText(`not found`);
@@ -439,6 +485,14 @@ export default function Index() {
                     <strong>Barcode:</strong> {variant.barcode || "N/A"},{" "}
                     <strong>SKU:</strong> {variant.sku}, <br />
                     <strong>Quantity:</strong> {variant.inventoryQuantity}
+                    <strong>Expiration Dates:</strong>
+                    <ul>
+                      {variant.expirationDisplay?.map((exp, index) => (
+                        <li key={index} style={{ color: exp.color }}>
+                          {exp.date}
+                        </li>
+                      ))}
+                    </ul>
                   </li>
                 ))}
               </ul>
