@@ -57,6 +57,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   try {
     if (deleteTag && productId) {
+      const storeResponse = await admin.graphql(
+        `#graphql
+            query adminInfo {
+              shop {
+                url
+              }
+            }`,
+      );
+
+      const storeData = await storeResponse.json();
+      result.storeUrl = storeData.data.shop.url;
+
       // Remove the tag from the product
       const deleteResponse = await admin.graphql(
         `#graphql
@@ -82,6 +94,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         result.success = true;
       }
     } else if (addTag && productId) {
+      const storeResponse = await admin.graphql(
+        `#graphql
+            query adminInfo {
+              shop {
+                url
+              }
+            }`,
+      );
+
+      const storeData = await storeResponse.json();
+      result.storeUrl = storeData.data.shop.url;
+
       // Add the tag back to the product
       const addResponse = await admin.graphql(
         `#graphql
@@ -112,7 +136,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } else {
       // Fetch the store URL
 
-      //possibly verify if the request has been complete already so it doesn't pull it multiple times for no reason.
       const storeResponse = await admin.graphql(
         `#graphql
             query adminInfo {
@@ -481,10 +504,76 @@ export default function Index() {
                 ></Button>
                 <strong>{product.title}</strong> &nbsp; &nbsp; Total Inventory:
                 <strong>{product.totalInventory}</strong>
+                <br />
+                {product.tags.some((tag) => tag.startsWith("Location:")) && (
+                  <>
+                    <li>
+                      <strong>Locations:</strong>
+                      <ul>
+                        {product.tags
+                          .filter((tag) => tag.startsWith("Location:")) // Get only location tags
+                          .map((tag, index) => {
+                            const location = tag.split(":").pop().trim(); // Extract location name
+                            return (
+                              <div key={index}>
+                                {location} &nbsp;
+                                <Button
+                                  icon={SearchListIcon}
+                                  onClick={() => {
+                                    if (tag) {
+                                      window.open(
+                                        `${fetcher.data?.storeUrl}/admin/products/?tag=${encodeURIComponent(tag)}`,
+                                        "_blank",
+                                      );
+                                    }
+                                  }}
+                                  disabled={!tag}
+                                />
+                                {!(
+                                  tagStatus[product.id] &&
+                                  tagStatus[product.id][tag] === "Deleted"
+                                ) && (
+                                  <Button
+                                    icon={DeleteIcon}
+                                    onClick={() =>
+                                      handleDeleteTag(product.id, tag)
+                                    }
+                                    plain
+                                    hidden={
+                                      tagStatus[product.id] &&
+                                      tagStatus[product.id][tag] === "Deleted"
+                                    }
+                                  />
+                                )}
+                                {tagStatus[product.id] &&
+                                  tagStatus[product.id][tag] === "Deleted" && (
+                                    <Button
+                                      tone="critical"
+                                      icon={PlusIcon}
+                                      onClick={() =>
+                                        handleAddTag(product.id, tag)
+                                      }
+                                      plain
+                                      disabled={
+                                        !(
+                                          tagStatus[product.id] &&
+                                          tagStatus[product.id][tag] ===
+                                            "Deleted"
+                                        )
+                                      }
+                                    />
+                                  )}
+                              </div>
+                            );
+                          })}
+                      </ul>
+                    </li>
+                  </>
+                )}
               </div>
               <ul>
                 {product.variants.map((variant) => (
-                  <div key={variant.barcode}>
+                  <li key={variant.barcode}>
                     <strong>Title:</strong>
                     {variant.title == "Default Title"
                       ? product.title
@@ -494,72 +583,6 @@ export default function Index() {
                     <strong>SKU:</strong> {variant.sku}, <br />
                     <strong>Quantity:</strong> {variant.inventoryQuantity}{" "}
                     <br />
-                    {product.tags.some((tag) =>
-                      tag.startsWith("Location:"),
-                    ) && (
-                      <>
-                        <strong>Locations:</strong>
-                        <ul>
-                          {product.tags
-                            .filter((tag) => tag.startsWith("Location:")) // Get only location tags
-                            .map((tag, index) => {
-                              const location = tag.split(":").pop().trim(); // Extract location name
-                              return (
-                                <li key={index}>
-                                  {location} &nbsp;
-                                  <Button
-                                    icon={SearchListIcon}
-                                    onClick={() => {
-                                      if (tag) {
-                                        window.open(
-                                          `${fetcher.data?.storeUrl}/admin/products/?tag=${encodeURIComponent(tag)}`,
-                                          "_blank",
-                                        );
-                                      }
-                                    }}
-                                    disabled={!tag}
-                                  />
-                                  {!(
-                                    tagStatus[product.id] &&
-                                    tagStatus[product.id][tag] === "Deleted"
-                                  ) && (
-                                    <Button
-                                      icon={DeleteIcon}
-                                      onClick={() =>
-                                        handleDeleteTag(product.id, tag)
-                                      }
-                                      plain
-                                      hidden={
-                                        tagStatus[product.id] &&
-                                        tagStatus[product.id][tag] === "Deleted"
-                                      }
-                                    />
-                                  )}
-                                  {tagStatus[product.id] &&
-                                    tagStatus[product.id][tag] ===
-                                      "Deleted" && (
-                                      <Button
-                                        tone="critical"
-                                        icon={PlusIcon}
-                                        onClick={() =>
-                                          handleAddTag(product.id, tag)
-                                        }
-                                        plain
-                                        disabled={
-                                          !(
-                                            tagStatus[product.id] &&
-                                            tagStatus[product.id][tag] ===
-                                              "Deleted"
-                                          )
-                                        }
-                                      />
-                                    )}
-                                </li>
-                              );
-                            })}
-                        </ul>
-                      </>
-                    )}
                     <strong>Expiration Dates:</strong>
                     <ul>
                       {variant.expirationDisplay?.map((exp, index) => {
@@ -591,7 +614,7 @@ export default function Index() {
                         );
                       })}
                     </ul>
-                  </div>
+                  </li>
                 ))}
               </ul>
               {result.success && (
