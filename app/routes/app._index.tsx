@@ -140,6 +140,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 variants(first: 250) {
                   edges {
                     node {
+                      id
                       title
                       barcode
                       sku
@@ -170,7 +171,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           title: "No Matching Barcode:" + barcode,
           tags: [],
           variants: [
-            { barcode, sku: "No Matching Barcode error", inventoryQuantity: 0 },
+            {
+              id,
+              barcode,
+              sku: "No Matching Barcode error",
+              inventoryQuantity: 0,
+            },
           ],
         });
       } else {
@@ -488,11 +494,34 @@ export default function Index() {
                     <br />
                     <strong>Expiration Dates:</strong>
                     <ul>
-                      {variant.expirationDisplay?.map((exp, index) => (
-                        <li key={index} style={{ color: exp.color }}>
-                          {exp.date}
-                        </li>
-                      ))}
+                      {variant.expirationDisplay?.map((exp, index) => {
+                        const variantId = variant.id
+                          ? variant.id.split("/").pop()
+                          : null; // Safely extract ID
+                        const expirationLink = variantId
+                          ? `https://apps.screenstaring.com/ed/shopify/variant?id=${variantId}`
+                          : null;
+
+                        return (
+                          <li key={index} style={{ color: exp.color }}>
+                            {expirationLink ? (
+                              <a
+                                href={expirationLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  textDecoration: "none",
+                                  color: exp.color,
+                                }}
+                              >
+                                {exp.date}
+                              </a>
+                            ) : (
+                              exp.date
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </li>
                 ))}
