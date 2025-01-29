@@ -477,7 +477,7 @@ export default function Index() {
                     )
                   }
                 ></Button>
-                <strong>{product.title}</strong> Total Inventory:
+                <strong>{product.title}</strong> &nbsp; &nbsp; Total Inventory:
                 <strong>{product.totalInventory}</strong>
               </div>
               <ul>
