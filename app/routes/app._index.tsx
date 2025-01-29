@@ -388,6 +388,7 @@ export default function Index() {
                     expirationMessage = `A batch expired ${Math.abs(daysUntilExpiration)} days ago`;
                   } else if (daysUntilExpiration <= 40) {
                     color = "orange"; // Expiring soon
+                    expirationMessage = `A batch expires in ${daysUntilExpiration} days`;
                   }
 
                   console.log(
@@ -422,7 +423,7 @@ export default function Index() {
               playFailureSound();
               speakText(`no inventory`);
               matchedVariant.expirationDisplay?.map((exp, index) => {
-                speakText(exp.expirationMessage);
+                speakText(`Expiration Date Batches can be cleared`);
               });
             } else {
               playSuccessSound();
@@ -492,85 +493,78 @@ export default function Index() {
           new Date(result.timestamp).toLocaleString(), // Display timestamp
           result.products.map((product) => (
             <div key={product.title}>
-              <div>
-                <Button
-                  icon={SearchIcon}
-                  onClick={() =>
-                    window.open(
-                      `${fetcher.data?.storeUrl}/admin/products/${product.id.split("/").pop()}`,
-                      "_blank",
-                    )
-                  }
-                ></Button>
-                <strong>{product.title}</strong> &nbsp; &nbsp; Total Inventory:
-                <strong>{product.totalInventory}</strong>
-                <br />
-                {product.tags.some((tag) => tag.startsWith("Location:")) && (
-                  <>
-                    <li>
-                      <strong>Locations:</strong>
-                      <ul>
-                        {product.tags
-                          .filter((tag) => tag.startsWith("Location:")) // Get only location tags
-                          .map((tag, index) => {
-                            const location = tag.split(":").pop().trim(); // Extract location name
-                            return (
-                              <div key={index}>
-                                {location} &nbsp;
-                                <Button
-                                  icon={SearchListIcon}
-                                  onClick={() => {
-                                    if (tag) {
-                                      window.open(
-                                        `${fetcher.data?.storeUrl}/admin/products/?tag=${encodeURIComponent(tag)}`,
-                                        "_blank",
-                                      );
-                                    }
-                                  }}
-                                  disabled={!tag}
-                                />
-                                {!(
+              <Button
+                icon={SearchIcon}
+                onClick={() =>
+                  window.open(
+                    `${fetcher.data?.storeUrl}/admin/products/${product.id.split("/").pop()}`,
+                    "_blank",
+                  )
+                }
+              ></Button>
+              <strong>{product.title}</strong>
+              <li>
+                <strong>Total Inventory:</strong>
+                {product.totalInventory}
+              </li>
+              {product.tags.some((tag) => tag.startsWith("Location:")) && (
+                <>
+                  <li>
+                    <strong>Locations:</strong>
+                    {product.tags
+                      .filter((tag) => tag.startsWith("Location:")) // Get only location tags
+                      .map((tag, index) => {
+                        const location = tag.split(":").pop().trim(); // Extract location name
+                        return (
+                          <p key={index}>
+                            {location} &nbsp;
+                            <Button
+                              icon={SearchListIcon}
+                              onClick={() => {
+                                if (tag) {
+                                  window.open(
+                                    `${fetcher.data?.storeUrl}/admin/products/?tag=${encodeURIComponent(tag)}`,
+                                    "_blank",
+                                  );
+                                }
+                              }}
+                              disabled={!tag}
+                            />
+                            {!(
+                              tagStatus[product.id] &&
+                              tagStatus[product.id][tag] === "Deleted"
+                            ) && (
+                              <Button
+                                icon={DeleteIcon}
+                                onClick={() => handleDeleteTag(product.id, tag)}
+                                plain
+                                hidden={
                                   tagStatus[product.id] &&
                                   tagStatus[product.id][tag] === "Deleted"
-                                ) && (
-                                  <Button
-                                    icon={DeleteIcon}
-                                    onClick={() =>
-                                      handleDeleteTag(product.id, tag)
-                                    }
-                                    plain
-                                    hidden={
+                                }
+                              />
+                            )}
+                            {tagStatus[product.id] &&
+                              tagStatus[product.id][tag] === "Deleted" && (
+                                <Button
+                                  tone="critical"
+                                  icon={PlusIcon}
+                                  onClick={() => handleAddTag(product.id, tag)}
+                                  plain
+                                  disabled={
+                                    !(
                                       tagStatus[product.id] &&
                                       tagStatus[product.id][tag] === "Deleted"
-                                    }
-                                  />
-                                )}
-                                {tagStatus[product.id] &&
-                                  tagStatus[product.id][tag] === "Deleted" && (
-                                    <Button
-                                      tone="critical"
-                                      icon={PlusIcon}
-                                      onClick={() =>
-                                        handleAddTag(product.id, tag)
-                                      }
-                                      plain
-                                      disabled={
-                                        !(
-                                          tagStatus[product.id] &&
-                                          tagStatus[product.id][tag] ===
-                                            "Deleted"
-                                        )
-                                      }
-                                    />
-                                  )}
-                              </div>
-                            );
-                          })}
-                      </ul>
-                    </li>
-                  </>
-                )}
-              </div>
+                                    )
+                                  }
+                                />
+                              )}
+                          </p>
+                        );
+                      })}
+                  </li>
+                </>
+              )}
               <ul>
                 {product.variants.map((variant) => (
                   <li key={variant.barcode}>
