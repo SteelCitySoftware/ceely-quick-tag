@@ -343,6 +343,47 @@ export default function Index() {
       if (fetcher.data.products && fetcher.data.products.length > 0) {
         let variantFound = false;
 
+        if (fetcher.data.success) {
+          fetcher.data.products.forEach((product) => {
+            product.variants.forEach((variant) => {
+              if (variant.expiration_json?.value) {
+                const expirationData = JSON.parse(
+                  variant.expiration_json.value,
+                );
+                variant.expirationDisplay = expirationData.map((exp) => {
+                  const expirationDate = new Date(exp.time);
+                  const today = new Date();
+                  const daysUntilExpiration = Math.ceil(
+                    (expirationDate - today) / (1000 * 60 * 60 * 24),
+                  );
+
+                  let color = "black"; // Default color
+                  let expirationMessage = `A batch expires in ${daysUntilExpiration} days`;
+
+                  if (daysUntilExpiration < 0) {
+                    color = "red"; // Expired
+                    expirationMessage = `A batch expired ${Math.abs(daysUntilExpiration)} days ago`;
+                  } else if (daysUntilExpiration <= 40) {
+                    color = "orange"; // Expiring soon
+                  }
+
+                  console.log(
+                    `Expiration Date: ${expirationDate.toLocaleDateString()} - Days Until Expiration: ${daysUntilExpiration} - Color: ${color}`,
+                  );
+                  return {
+                    expirationMessage: expirationMessage,
+                    date: expirationDate.toLocaleDateString(),
+                    color,
+                  };
+                });
+              } else {
+                variant.expirationDisplay = [
+                  { date: "No Expiration Data", color: "black" },
+                ];
+              }
+            });
+          });
+        }
         fetcher.data.products.forEach((product) => {
           const matchedVariant = product.variants.find(
             (variant) => variant.barcode === lastBarcode,
@@ -351,58 +392,19 @@ export default function Index() {
           if (matchedVariant) {
             scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
 
-            if (fetcher.data.success) {
-              fetcher.data.products.forEach((product) => {
-                product.variants.forEach((variant) => {
-                  if (variant.expiration_json?.value) {
-                    const expirationData = JSON.parse(
-                      variant.expiration_json.value,
-                    );
-                    variant.expirationDisplay = expirationData.map((exp) => {
-                      const expirationDate = new Date(exp.time);
-                      const today = new Date();
-                      const daysUntilExpiration = Math.ceil(
-                        (expirationDate - today) / (1000 * 60 * 60 * 24),
-                      );
-
-                      let color = "black"; // Default color
-                      let expirationMessage = `A batch expires in ${daysUntilExpiration} days`;
-
-                      if (daysUntilExpiration < 0) {
-                        color = "red"; // Expired
-                        expirationMessage = `A batch expired ${Math.abs(daysUntilExpiration)} days ago`;
-                      } else if (daysUntilExpiration <= 40) {
-                        color = "orange"; // Expiring soon
-                      }
-
-                      console.log(
-                        `Expiration Date: ${expirationDate.toLocaleDateString()} - Days Until Expiration: ${daysUntilExpiration} - Color: ${color}`,
-                      );
-                      speakText(expirationMessage);
-
-                      return {
-                        date: expirationDate.toLocaleDateString(),
-                        color,
-                      };
-                    });
-                  } else {
-                    variant.expirationDisplay = [
-                      { date: "No Expiration Data", color: "black" },
-                    ];
-                  }
-                });
-              });
-            }
-
             if (!fetcher.data.success) {
               playFailureSound();
               speakText(`not found`);
             } else if (scannedVariantInventory <= 0) {
               playFailureSound();
               speakText(`no inventory`);
+              matchedVariant.expirationDisplay?.map((exp, index) => {
+                speakText(exp.expirationMessage);
+              });
             } else {
               playSuccessSound();
               speakText(`${scannedVariantInventory}`);
+              speakText(matchedVariant.expirationDisplay.expirationMessage);
             }
 
             variantFound = true;
