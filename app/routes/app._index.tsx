@@ -186,16 +186,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       );
 
       const searchResult = await searchResponse.json();
-      const product = searchResult.data.products.edges[0]?.node;
-
-      if (!product) {
+      const products = searchResult.data.products.edges.map(
+        (edge) => edge.node,
+      );
+      if (!products.length) {
         result.error = "No Matching Barcode error";
         result.products.push({
           title: "No Matching Barcode:" + barcode,
           tags: [],
           variants: [
             {
-              id,
+              id: "N/A",
               barcode,
               sku: "No Matching Barcode error",
               inventoryQuantity: 0,
@@ -203,10 +204,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           ],
         });
       } else {
-        // Add the user-defined tag to the product
-        const updatedTags = [...new Set([...product.tags, tag])];
-        const tagResponse = await admin.graphql(
-          `#graphql
+        // Process each product returned from the search
+        for (const product of products) {
+          // Add the user-defined tag to the product
+          const updatedTags = [...new Set([...product.tags, tag])];
+          const tagResponse = await admin.graphql(
+            `#graphql
           mutation addTags($id: ID!, $tags: [String!]!) {
             tagsAdd(id: $id, tags: $tags) {
               node {
@@ -217,35 +220,35 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               }
             }
           }`,
-          {
-            variables: {
-              id: product.id,
-              tags: updatedTags,
+            {
+              variables: {
+                id: product.id,
+                tags: updatedTags,
+              },
             },
-          },
-        );
+          );
 
-        const tagResult = await tagResponse.json();
-        if (tagResult.data.tagsAdd.userErrors.length > 0) {
-          result.error = tagResult.data.tagsAdd.userErrors[0].message;
-        } else {
-          result.success = true;
-          result.products.push({
-            title: product.title,
-            tags: updatedTags,
-            id: product.id,
-            variants: product.variants.edges.map(
-              (variantEdge) => variantEdge.node,
-            ),
-            totalInventory: product.totalInventory,
-          });
+          const tagResult = await tagResponse.json();
+          if (tagResult.data.tagsAdd.userErrors.length > 0) {
+            result.error = tagResult.data.tagsAdd.userErrors[0].message;
+          } else {
+            result.success = true;
+            result.products.push({
+              title: product.title,
+              tags: updatedTags,
+              id: product.id,
+              variants: product.variants.edges.map(
+                (variantEdge) => variantEdge.node,
+              ),
+              totalInventory: product.totalInventory,
+            });
+          }
         }
       }
     }
   } catch (error) {
     result.error = error.message;
   }
-
   return result;
 };
 
@@ -374,6 +377,7 @@ export default function Index() {
                   variant.expiration_json.value,
                 );
                 variant.expirationDisplay = expirationData.map((exp) => {
+                  const batchQuantity = exp.quantity; // Default color
                   const expirationDate = new Date(exp.time);
                   const today = new Date();
                   const daysUntilExpiration = Math.ceil(
@@ -386,11 +390,18 @@ export default function Index() {
                   if (daysUntilExpiration < 0) {
                     color = "red"; // Expired
                     expirationMessage = `A batch expired ${Math.abs(daysUntilExpiration)} days ago`;
+                  } else if (daysUntilExpiration == 0) {
+                    color = "red"; // Expiring soon
+                    expirationMessage = `A batch expired today`;
                   } else if (daysUntilExpiration <= 40) {
                     color = "orange"; // Expiring soon
                     expirationMessage = `A batch expires in ${daysUntilExpiration} days`;
                   }
-
+                  if (batchQuantity == null) {
+                    expirationMessage += ` and isn't tracked.`;
+                  } else {
+                    expirationMessage += ` containing ${batchQuantity} items.`;
+                  }
                   console.log(
                     `Expiration Date: ${expirationDate.toLocaleDateString()} - Days Until Expiration: ${daysUntilExpiration} - Color: ${color}`,
                   );
@@ -408,31 +419,41 @@ export default function Index() {
             });
           });
         }
+        if (fetcher.data.products.length > 1) {
+          speakText(`multiple products with the same UPC`);
+        }
         fetcher.data.products.forEach((product) => {
-          const matchedVariant = product.variants.find(
+          const matchedVariants = product.variants.filter(
             (variant) => variant.barcode === lastBarcode,
           );
-
-          if (matchedVariant) {
-            scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
-
-            if (!fetcher.data.success) {
-              playFailureSound();
-              speakText(`not found`);
-            } else if (scannedVariantInventory <= 0) {
-              playFailureSound();
-              speakText(`no inventory`);
-              matchedVariant.expirationDisplay?.map((exp, index) => {
-                speakText(`Expiration Date Batches can be cleared`);
-              });
-            } else {
-              playSuccessSound();
-              speakText(`${scannedVariantInventory}`);
-              speakText(matchedVariant.expirationDisplay.expirationMessage);
-            }
-
-            variantFound = true;
+          if (matchedVariants.length > 1) {
+            speakText(`multiple variants with the same UPC`);
           }
+          matchedVariants.forEach((matchedVariant) => {
+            if (matchedVariant) {
+              scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
+
+              if (!fetcher.data.success) {
+                playFailureSound();
+                speakText(`not found`);
+              } else if (scannedVariantInventory <= 0) {
+                playFailureSound();
+                speakText(`no inventory`);
+                if (matchedVariant.expirationDisplay?.map.length > 0) {
+                  speakText(`Expiration Date Batches can be cleared`);
+                }
+                matchedVariant.expirationDisplay?.map((exp, index) => {
+                  speakText(exp.expirationMessage);
+                });
+              } else {
+                playSuccessSound();
+                speakText(`${scannedVariantInventory}`);
+                speakText(matchedVariant.expirationDisplay.expirationMessage);
+              }
+
+              variantFound = true;
+            }
+          });
         });
 
         if (!variantFound) {
