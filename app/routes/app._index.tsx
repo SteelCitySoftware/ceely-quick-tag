@@ -49,6 +49,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const productId = formData.get("productId");
   const productIds = formData.get("productIds") as string;
   const adjustInventory = formData.get("adjustInventory");
+  const currentQty = parseInt(formData.get("currentQty") as string);
 
   const result = {
     success: false,
@@ -60,6 +61,121 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   };
 
   try {
+    if (productId && !tag && !barcode && !addTag && !deleteTag) {
+      result.tag = "__refresh__"; // ✅ Ensures it passes UI filtering
+
+      console.log("999999999");
+      // This is a direct refresh for a single product
+      const storeResponse = await admin.graphql(
+        `#graphql
+    query adminInfo {
+      shop {
+        url
+      }
+    }`,
+      );
+      const storeData = await storeResponse.json();
+      result.storeUrl = storeData.data.shop.url;
+
+      const productResponse = await admin.graphql(
+        `#graphql
+    query getProduct($id: ID!) {
+      product(id: $id) {
+        id
+        title
+        status
+        tags
+        totalInventory
+        product_thumbnail: media(first: 1) {
+                  nodes {
+                    preview {
+                      image {
+                        url(transform: {maxWidth: 50})
+                      }
+                    }
+                  }
+                }
+        product_location: metafield(namespace: "custom", key: "product_location") {
+                  value
+                }
+        variants(first: 50) {
+          edges {
+            node {
+              id
+              title
+              barcode
+              sku
+              inventoryQuantity
+              variant_thumbnail: image {
+                        url(transform: {maxWidth: 50})
+                      }
+              availableForSale
+              inventoryItem {
+                id
+                inventoryHistoryUrl
+                inventoryLevels(first: 2) {
+                  edges {
+                    node {
+                      item { id }
+                      location { id name }
+                        quantities(names: ["available", "incoming", "committed", "damaged", "on_hand", "quality_control", "reserved", "safety_stock"]) {
+                        id
+                        name
+                        quantity
+                      }
+                    }
+                  }
+                }
+              }
+              variant_location: metafield(namespace: "custom", key: "variant_location") {
+                value
+              }
+              expiration_json: metafield(namespace: "expiration_dates", key: "allocations") {
+                value
+              }
+            }
+          }
+        }
+      }
+    }`,
+        { variables: { id: productId } },
+      );
+
+      const productResult = await productResponse.json();
+      const product = productResult.data.product;
+
+      result.success = true;
+      result.products = [
+        {
+          title: product.title,
+          tags: product.tags,
+          id: product.id,
+          status: product.status,
+          thumbnail: product.product_thumbnail?.nodes[0]?.preview.image.url,
+          totalInventory: product.totalInventory,
+          variants: product.variants.edges.map((edge) => {
+            const node = edge.node;
+            const levels = node.inventoryItem?.inventoryLevels?.edges ?? [];
+
+            const inventoryLevels = levels.map((levelEdge) => ({
+              inventoryLevelId: levelEdge.node.item.id,
+              locationId: levelEdge.node.location.id,
+              locationName: levelEdge.node.location.name,
+              quantities: levelEdge.node.quantities,
+            }));
+
+            return {
+              ...node,
+              inventoryHistoryUrl: node.inventoryItem?.inventoryHistoryUrl,
+              inventoryLevels,
+            };
+          }),
+        },
+      ];
+
+      return result;
+    }
+
     if (adjustInventory === "true") {
       const inventoryLevelName = formData.get("inventoryLevelName") as string;
       const levelId = formData.get("levelId") as string;
@@ -69,38 +185,42 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const adjResponse = await admin.graphql(
         `#graphql
   mutation adjustInventory($inventoryLevelName:String!, $levelId: ID!, $locationId: ID!, $delta: Int!) {
-  inventoryAdjustQuantities(
-    input: {
-      reason: "correction",
-      name: $inventoryLevelName,
-      changes: [{
-        inventoryItemId: $levelId,
-        locationId: $locationId,
-        delta: $delta
-      }]
-    }
-  ) {
-    inventoryAdjustmentGroup {
-      changes {
-        delta
-        name
-        quantityAfterChange
-        location {
-          id
-          name
-        }
-        item {
-          variant {
-            title
-          }
-        }
-      }
-    }
-    userErrors {
-      message
-    }
-  }
-}`,
+            inventoryAdjustQuantities(
+              input: {
+                reason: "correction",
+                name: $inventoryLevelName,
+                changes: [{
+                  inventoryItemId: $levelId,
+                  locationId: $locationId,
+                  delta: $delta
+                }]
+              }
+            ) {
+              inventoryAdjustmentGroup {
+                changes {
+                  delta
+                  name
+                  quantityAfterChange
+                  location {
+                    id
+                    name
+                  }
+                  item {
+                    variant {
+                      title
+                      product {
+                        title
+                        id
+                      }
+                    }
+                  }
+                }
+              }
+              userErrors {
+                message
+              }
+            }
+          }`,
         {
           variables: {
             inventoryLevelName,
@@ -122,9 +242,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const change =
           adjResult.data.inventoryAdjustQuantities.inventoryAdjustmentGroup
             ?.changes?.[0];
+        const currentQty = parseInt(formData.get("currentQty") as string);
+
         result.success = true;
+        result.needsRefresh = true;
         result.adjustmentResult = {
-          quantityAfterChange: quantity + delta,
+          quantityAfterChange:
+            change?.quantityAfterChange ?? currentQty + delta,
+          productId: change?.item?.variant?.product?.id ?? null,
         };
         return result;
       }
@@ -344,7 +469,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 status
                 tags
                 totalInventory
-                product_thumnail: media(first: 1) {
+                product_thumbnail: media(first: 1) {
                   nodes {
                     preview {
                       image {
@@ -364,7 +489,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                       barcode
                       sku
                       inventoryQuantity
-                      variant_thumbnails: image {
+                      variant_thumbnail: image {
                         url(transform: {maxWidth: 50})
                       }
                       availableForSale
@@ -463,7 +588,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               tags: updatedTags,
               id: product.id,
               status: product.status,
-              thumbnail: product.thumbnail?.nodes[0]?.preview.image.url,
+              thumbnail: product.product_thumbnail?.nodes[0]?.preview.image.url,
               variants: product.variants.edges.map((variantEdge) => {
                 const node = variantEdge.node;
                 const levels = node.inventoryItem?.inventoryLevels?.edges ?? [];
@@ -515,7 +640,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 status
                 tags
                 totalInventory
-                product_thumnail: media(first: 1) {
+                product_thumbnail: media(first: 1) {
                   nodes {
                     preview {
                       image {
@@ -535,7 +660,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                       barcode
                       sku
                       inventoryQuantity
-                      variant_thumbnails: image {
+                      variant_thumbnail: image {
                         url(transform: {maxWidth: 50})
                       }
                       availableForSale
@@ -594,7 +719,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           tags: product.tags,
           id: product.id,
           status: product.status,
-          thumbnail: product.thumbnail?.nodes[0]?.preview.image.url,
+          thumbnail: product.product_thumbnail?.nodes[0]?.preview.image.url,
           variants: product.variants.edges.map((variantEdge) => {
             const node = variantEdge.node;
             const levels = node.inventoryItem?.inventoryLevels?.edges ?? [];
@@ -641,25 +766,23 @@ function InventoryAdjustForm({
   locationId,
   onQuantityUpdate,
 }) {
-  const fetcher = useFetcher();
+  const fetcher = useFetcher({ key: "adjust" });
   const [inputQty, setInputQty] = useState(quantity);
   const delta = inputQty - quantity;
 
   useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data?.success) {
-      const change =
-        adjResult.data.inventoryAdjustQuantities.inventoryAdjustmentGroup
-          ?.changes?.[0];
-      result.success = true;
-      result.adjustmentResult = {
-        quantityAfterChange:
-          change?.quantityAfterChange ??
-          change?.inventoryLevel?.available ??
-          null,
-      };
-      if (typeof change === "number") {
-        onQuantityUpdate(change);
-        setInputQty(change); // reset local input to new value
+      const newQty = fetcher.data?.adjustmentResult?.quantityAfterChange;
+      const productId = fetcher.data?.adjustmentResult?.productId;
+
+      if (typeof newQty === "number") {
+        onQuantityUpdate(newQty);
+        setInputQty(newQty);
+      }
+
+      // ✅ Trigger product refresh if ID is returned
+      if (productId) {
+        fetcher.submit({ productId }, { method: "POST" });
       }
     }
   }, [fetcher.state, fetcher.data]);
@@ -677,11 +800,9 @@ function InventoryAdjustForm({
               levelId,
               locationId,
               delta: String(delta),
+              currentQty: String(quantity), // 👈 ADD THIS
             },
-            {
-              method: "post",
-              encType: "application/x-www-form-urlencoded",
-            },
+            { method: "post", encType: "application/x-www-form-urlencoded" },
           );
         }
       }}
@@ -703,7 +824,7 @@ function InventoryAdjustForm({
 }
 
 export default function Index() {
-  const fetcher = useFetcher<typeof action>();
+  const fetcher = useFetcher<typeof action>({ key: "adjust" });
   const [barcode, setBarcode] = useState("");
   const [lastBarcode, setLastBarcode] = useState("");
   const [lastBarcodes, setLastBarcodes] = useState([]);
@@ -892,6 +1013,16 @@ export default function Index() {
 
   useEffect(() => {
     if (fetcher.data) {
+      if (
+        fetcher.data?.products?.[0]?.id &&
+        fetcher.data?.adjustmentResult?.productId
+      ) {
+        console.log(
+          "MATCH:",
+          fetcher.data.products[0].id,
+          fetcher.data.adjustmentResult.productId,
+        );
+      }
       const timestamp = new Date().toISOString(); // Generate a timestamp
       let scannedVariantInventory = 0;
 
@@ -1033,19 +1164,31 @@ export default function Index() {
             return [{ ...fetcher.data, timestamp }, ...prevResults];
           }
 
-          const existingIndex = prevResults.findIndex(
-            (result) =>
-              result.products[0]?.id === fetcher.data.products[0]?.id &&
-              result.tag === fetcher.data.tag,
+          const refreshedProductId = fetcher.data.products?.[0]?.id;
+
+          const updatedResults = prevResults.map((result) => {
+            const productMatch = result.products?.some(
+              (p) => p.id === refreshedProductId,
+            );
+            if (productMatch) {
+              return {
+                ...result,
+                products: result.products.map((p) =>
+                  p.id === refreshedProductId ? fetcher.data.products[0] : p,
+                ),
+                timestamp,
+              };
+            }
+            return result;
+          });
+
+          const isNew = !updatedResults.some((r) =>
+            r.products?.some((p) => p.id === refreshedProductId),
           );
 
-          if (existingIndex !== -1) {
-            const updatedResults = [...prevResults];
-            updatedResults[existingIndex] = { ...fetcher.data, timestamp };
-            return updatedResults;
-          }
-
-          return [{ ...fetcher.data, timestamp }, ...prevResults];
+          return isNew
+            ? [{ ...fetcher.data, timestamp }, ...prevResults]
+            : updatedResults;
         });
       } catch {}
       if (fetcher.data.success && fetcher.data.tag) {
