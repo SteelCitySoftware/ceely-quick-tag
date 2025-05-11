@@ -25,7 +25,9 @@ export default function App() {
           Home
         </Link>
         <Link to="/app/qrcode-generator">GenerateQRCodes</Link>
+        <Link to="/app/order-tagger">Tag Orders</Link>
         <Link to="/app/product-lookup">test product search beta</Link>
+        <Link to="/app/picking-order">Change The Pick List Order</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>

@@ -18,7 +18,6 @@ import {
   PlusIcon,
   DeleteIcon,
   SearchListIcon,
-  PageClockFilledIcon,
   SearchIcon,
   BarcodeIcon,
 } from "@shopify/polaris-icons";
@@ -48,7 +47,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const addTag = formData.get("addTag");
   const productId = formData.get("productId");
   const productIds = formData.get("productIds") as string;
-  const adjustInventory = formData.get("adjustInventory");
 
   const result = {
     success: false,
@@ -60,77 +58,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   };
 
   try {
-    if (adjustInventory === "true") {
-      const inventoryLevelName = formData.get("inventoryLevelName") as string;
-      const levelId = formData.get("levelId") as string;
-      const locationId = formData.get("locationId") as string;
-      const delta = parseInt(formData.get("delta") as string);
-
-      const adjResponse = await admin.graphql(
-        `#graphql
-  mutation adjustInventory($inventoryLevelName:String!, $levelId: ID!, $locationId: ID!, $delta: Int!) {
-  inventoryAdjustQuantities(
-    input: {
-      reason: "correction",
-      name: $inventoryLevelName,
-      changes: [{
-        inventoryItemId: $levelId,
-        locationId: $locationId,
-        delta: $delta
-      }]
-    }
-  ) {
-    inventoryAdjustmentGroup {
-      changes {
-        delta
-        name
-        quantityAfterChange
-        location {
-          id
-          name
-        }
-        item {
-          variant {
-            title
-          }
-        }
-      }
-    }
-    userErrors {
-      message
-    }
-  }
-}`,
-        {
-          variables: {
-            inventoryLevelName,
-            levelId,
-            locationId,
-            delta,
-          },
-        },
-      );
-
-      const adjResult = await adjResponse.json();
-      if (adjResult.data.inventoryAdjustQuantities.userErrors.length) {
-        result.errors.push(
-          `Adjustment error: ${adjResult.data.inventoryAdjustQuantities.userErrors
-            .map((e) => e.message)
-            .join(", ")}`,
-        );
-      } else {
-        const change =
-          adjResult.data.inventoryAdjustQuantities.inventoryAdjustmentGroup
-            ?.changes?.[0];
-        result.success = true;
-        result.adjustmentResult = {
-          quantityAfterChange: quantity + delta,
-        };
-        return result;
-      }
-      return result;
-    }
-
     if (deleteTag && productId) {
       const storeResponse = await admin.graphql(
         `#graphql
@@ -333,7 +260,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const searchResponse = await admin.graphql(
         `#graphql
         query searchProductsByBarcode($queryString: String) {
-          products(first: 75, query: $queryString) {
+          products(first: 10, query: $queryString) {
             edges {
               node {
                 id
@@ -356,7 +283,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 product_location: metafield(namespace: "custom", key: "product_location") {
                   value
                 }
-                variants(first: 50) {
+                variants(first: 250) {
                   edges {
                     node {
                       id
@@ -370,8 +297,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                       availableForSale
                       inventoryItem {
                         id
-                        inventoryHistoryUrl
-                        inventoryLevels(first: 2) {
+                        inventoryLevels(first: 10) {
                           edges {
                             node {
                               item {
@@ -381,7 +307,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                                 id
                                 name
                               }
-                              quantities(names: ["available", "incoming", "committed", "damaged", "on_hand", "quality_control", "reserved", "safety_stock"]) {
+                              quantities(names: ["available", "on_hand", "committed", "safety_stock"]) {
                                 id
                                 name
                                 quantity
@@ -389,6 +315,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                             }
                           }
                         }
+                        inventoryHistoryUrl
                       }
                       variant_location: metafield(namespace: "custom", key: "variant_location") {
                         value
@@ -396,7 +323,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                       expiration_json: metafield(namespace: "expiration_dates", key: "allocations") {
                         value
                       }
-                    }  
+                    }
                   }
                 }
               }
@@ -463,24 +390,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               tags: updatedTags,
               id: product.id,
               status: product.status,
-              thumbnail: product.thumbnail?.nodes[0]?.preview.image.url,
-              variants: product.variants.edges.map((variantEdge) => {
-                const node = variantEdge.node;
-                const levels = node.inventoryItem?.inventoryLevels?.edges ?? [];
-
-                const inventoryLevels = levels.map((levelEdge) => ({
-                  inventoryLevelId: levelEdge.node.item.id,
-                  locationId: levelEdge.node.location.id,
-                  locationName: levelEdge.node.location.name,
-                  quantities: levelEdge.node.quantities,
-                }));
-
-                return {
-                  ...node,
-                  inventoryHistoryUrl: node.inventoryItem?.inventoryHistoryUrl,
-                  inventoryLevels, // <- this is the new nested array
-                };
-              }),
+              thumbnail: product.thumbnail?.nodes[0]?.url,
+              variants: product.variants.edges.map(
+                (variantEdge) => variantEdge.node,
+              ),
               totalInventory: product.totalInventory,
             });
           }
@@ -504,30 +417,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const tagSearchResponse = await admin.graphql(
         `#graphql
           query searchProductsByTag($queryString: String) {
-          products(first: 75, query: $queryString) {
+          products(first: 250, query: $queryString) {
             edges {
               node {
                 id
                 title
-                featuredMedia {
-                  id
-                }
-                status
                 tags
                 totalInventory
-                product_thumnail: media(first: 1) {
+                status
+                thumbnail: images(first:1, maxWidth:50) {
                   nodes {
-                    preview {
-                      image {
-                        url(transform: {maxWidth: 50})
-                      }
-                    }
-                  }
-                }
-                product_location: metafield(namespace: "custom", key: "product_location") {
-                  value
-                }
-                variants(first: 50) {
+                      url
+                  }}
+                variants(first: 250) {
                   edges {
                     node {
                       id
@@ -535,38 +437,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                       barcode
                       sku
                       inventoryQuantity
-                      variant_thumbnails: image {
-                        url(transform: {maxWidth: 50})
-                      }
-                      availableForSale
-                      inventoryItem {
-                        id
-                        inventoryHistoryUrl
-                        inventoryLevels(first: 2) {
-                          edges {
-                            node {
-                              item {
-                                id
-                              }
-                              location {
-                                id
-                                name
-                              }
-                              quantities(names: ["available", "incoming", "committed", "damaged", "on_hand", "quality_control", "reserved", "safety_stock"]) {
-                                id
-                                name
-                                quantity
-                              }
-                            }
-                          }
-                        }
-                      }
-                      variant_location: metafield(namespace: "custom", key: "variant_location") {
-                        value
-                      }
                       expiration_json: metafield(namespace: "expiration_dates", key: "allocations") {
-                        value
-                      }
+                          value
+                    }
                     }
                   }
                 }
@@ -590,29 +463,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const product = edge.node;
 
         return {
+          id: product.id,
           title: product.title,
           tags: product.tags,
-          id: product.id,
-          status: product.status,
-          thumbnail: product.thumbnail?.nodes[0]?.preview.image.url,
-          variants: product.variants.edges.map((variantEdge) => {
-            const node = variantEdge.node;
-            const levels = node.inventoryItem?.inventoryLevels?.edges ?? [];
-
-            const inventoryLevels = levels.map((levelEdge) => ({
-              inventoryLevelId: levelEdge.node.item.id,
-              locationId: levelEdge.node.location.id,
-              locationName: levelEdge.node.location.name,
-              quantities: levelEdge.node.quantities,
-            }));
-
-            return {
-              ...node,
-              inventoryHistoryUrl: node.inventoryItem?.inventoryHistoryUrl,
-              inventoryLevels, // <- this is the new nested array
-            };
-          }),
           totalInventory: product.totalInventory,
+          status: product.status,
+          thumbnail: product.thumbnail?.nodes[0]?.url,
+          variants: product.variants.edges.map(
+            (variantEdge) => variantEdge.node,
+          ), // Ensure proper variant structure
         };
       });
 
@@ -633,74 +492,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   return result;
 };
-
-function InventoryAdjustForm({
-  inventoryLevelName,
-  quantity,
-  levelId,
-  locationId,
-  onQuantityUpdate,
-}) {
-  const fetcher = useFetcher();
-  const [inputQty, setInputQty] = useState(quantity);
-  const delta = inputQty - quantity;
-
-  useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data?.success) {
-      const change =
-        adjResult.data.inventoryAdjustQuantities.inventoryAdjustmentGroup
-          ?.changes?.[0];
-      result.success = true;
-      result.adjustmentResult = {
-        quantityAfterChange:
-          change?.quantityAfterChange ??
-          change?.inventoryLevel?.available ??
-          null,
-      };
-      if (typeof change === "number") {
-        onQuantityUpdate(change);
-        setInputQty(change); // reset local input to new value
-      }
-    }
-  }, [fetcher.state, fetcher.data]);
-
-  return (
-    <form
-      method="post"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!isNaN(delta) && delta !== 0) {
-          fetcher.submit(
-            {
-              adjustInventory: "true",
-              inventoryLevelName,
-              levelId,
-              locationId,
-              delta: String(delta),
-            },
-            {
-              method: "post",
-              encType: "application/x-www-form-urlencoded",
-            },
-          );
-        }
-      }}
-      style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
-    >
-      {inventoryLevelName}
-      <input
-        type="number"
-        name="newQty"
-        value={inputQty}
-        onChange={(e) => setInputQty(Number(e.target.value))}
-        style={{ width: "60px" }}
-      />
-      <button type="submit" disabled={delta === 0}>
-        {delta > 0 ? `+${delta}` : delta}
-      </button>
-    </form>
-  );
-}
 
 export default function Index() {
   const fetcher = useFetcher<typeof action>();
@@ -1331,61 +1122,7 @@ export default function Index() {
                                 : variant.title}
                             </Button>
                           </td>
-                          <td>
-                            <td>
-                              <details>
-                                <summary>Inventory Details</summary>
-                                <ul style={{ paddingLeft: "1em", margin: 0 }}>
-                                  {(
-                                    variant.inventoryItem?.inventoryLevels
-                                      ?.edges ?? []
-                                  ).map((edge, i) => (
-                                    <li key={i}>
-                                      <strong>{edge.node.location.name}</strong>
-                                      <ul>
-                                        {(edge.node.quantities ?? []).map(
-                                          (q, j) => (
-                                            <li key={j}>
-                                              {q.name === "available" ? (
-                                                <InventoryAdjustForm
-                                                  inventoryLevelName={q.name}
-                                                  quantity={q.quantity}
-                                                  levelId={edge.node.item.id}
-                                                  locationId={
-                                                    edge.node.location.id
-                                                  }
-                                                  onQuantityUpdate={(
-                                                    newQty,
-                                                  ) => {
-                                                    q.quantity = newQty;
-                                                    setResults((r) => [...r]);
-                                                  }}
-                                                />
-                                              ) : (
-                                                `${q.name}: ${q.quantity}`
-                                              )}
-                                            </li>
-                                          ),
-                                        )}
-                                      </ul>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </details>
-                            </td>{" "}
-                            {variant.inventoryHistoryUrl && (
-                              <Button
-                                icon={PageClockFilledIcon}
-                                onClick={() =>
-                                  window.open(
-                                    variant.inventoryHistoryUrl,
-                                    "_blank",
-                                  )
-                                }
-                                plain
-                              />
-                            )}{" "}
-                          </td>
+                          <td>{variant.inventoryQuantity}</td>
 
                           <td>
                             {variant.barcode || "N/A"}
@@ -1509,31 +1246,30 @@ export default function Index() {
 
   return (
     <Page
-      fullWidth
       style={{
         position: "absolute",
         left: "0",
         right: "0",
+        width: "100%",
       }}
     >
       <TitleBar title="Ceely Quick Tag" />
       {/* <div>{fetcher.data?.storeUrl}</div> */}
-      <div style={{ maxWidth: "200px" }}>
-        <Form
-          onSubmit={(event) => {
-            handleSubmit(event);
-            document.getElementById("barcodeField")?.focus;
-          }}
-        >
-          <TextField
-            id="tagField"
-            prefix={<Icon source={ProductIcon} />}
-            label="Tag"
-            value={tag}
-            onChange={setTag}
-            autoComplete="off"
-          />{" "}
-          {/*                 <Button
+      <Form
+        onSubmit={(event) => {
+          handleSubmit(event);
+          document.getElementById("barcodeField")?.focus;
+        }}
+      >
+        <TextField
+          id="tagField"
+          prefix={<Icon source={ProductIcon} />}
+          label="Tag"
+          value={tag}
+          onChange={setTag}
+          autoComplete="off"
+        />{" "}
+        {/*                 <Button
                   icon={SearchListIcon}
                   onClick={() => {
                     if (tag) {
@@ -1545,7 +1281,7 @@ export default function Index() {
                   }}
                   disabled={!tag}
                 ></Button> */}{" "}
-          {/*  <Button
+        {/*  <Button
           onClick={() => {
             if (!tag.trim()) {
               console.error("No tag provided!"); // Debugging
@@ -1572,23 +1308,22 @@ export default function Index() {
         >
           Search Products by Tag
         </Button> */}
-          <TextField
-            id="barcodeField"
-            prefix={<Icon source={BarcodeIcon} />}
-            type="text"
-            label="Barcode"
-            value={barcode}
-            onChange={setBarcode}
-            autoComplete="off"
-          />
-          <Button submit loading={isLoading} primary>
-            {barcode ? "Tag Product" : "Search"}
-          </Button>
-          <Button onClick={handleReset} disabled={results.length === 0}>
-            Reset
-          </Button>
-        </Form>
-      </div>
+        <TextField
+          id="barcodeField"
+          prefix={<Icon source={BarcodeIcon} />}
+          type="text"
+          label="Barcode"
+          value={barcode}
+          onChange={setBarcode}
+          autoComplete="off"
+        />
+        <Button submit loading={isLoading} primary>
+          {barcode ? "Tag Product" : "Search"}
+        </Button>
+        <Button onClick={handleReset} disabled={results.length === 0}>
+          Reset
+        </Button>
+      </Form>
       <Text>Total Request Count: {results.length}</Text>
       <DataTable
         hideScrollIndicator={true}
