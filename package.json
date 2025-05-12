@@ -2,7 +2,7 @@
   "name": "ceely-quick-tag",
   "private": true,
   "scripts": {
-    "build": "prisma generate && remix vite:build && node generate-env.cjs",
+    "build": "prisma generate --no-engine && prisma db push && remix vite:build && node generate-env.cjs",
     "dev": "shopify app dev",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
