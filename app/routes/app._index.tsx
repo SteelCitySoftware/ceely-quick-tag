@@ -1130,36 +1130,31 @@ export default function Index() {
               speakText(`multiple variants`);
             }
             matchedVariants.forEach((matchedVariant) => {
-              if (
-                matchedVariant &&
-                matchedVariant.barcode !== lastSpokenBarcode
-              ) {
-                scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
+              scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
 
-                if (!fetcher.data.success) {
-                  playFailureSound();
-                  speakText(`not found`);
-                } else if (scannedVariantInventory <= 0) {
-                  playFailureSound();
-                  speakText(`no inventory`);
-                  // if (matchedVariant.expirationDisplay?.map.length > 0) {
-                  //   speakText(`Expiration Date Batches can be cleared`);
-                  // }
-                  matchedVariant.expirationDisplay?.map((exp) => {
-                    speakText(exp.expirationMessage);
-                  });
-                } else {
-                  playSuccessSound();
-                  speakText(`${scannedVariantInventory}`);
-                  matchedVariant.expirationDisplay?.map((exp) => {
-                    speakText(exp.expirationMessage);
-                  });
-                }
-
-                speakText(matchedVariant.variantMessage);
-
-                variantFound = true;
+              if (!fetcher.data.success) {
+                playFailureSound();
+                speakText(`not found`);
+              } else if (scannedVariantInventory <= 0) {
+                playFailureSound();
+                speakText(`no inventory`);
+                // if (matchedVariant.expirationDisplay?.map.length > 0) {
+                //   speakText(`Expiration Date Batches can be cleared`);
+                // }
+                matchedVariant.expirationDisplay?.map((exp) => {
+                  speakText(exp.expirationMessage);
+                });
+              } else {
+                playSuccessSound();
+                speakText(`${scannedVariantInventory}`);
+                matchedVariant.expirationDisplay?.map((exp) => {
+                  speakText(exp.expirationMessage);
+                });
               }
+
+              speakText(matchedVariant.variantMessage);
+
+              variantFound = true;
             });
           });
 
