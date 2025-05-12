@@ -1161,11 +1161,11 @@ export default function Index() {
           if (!variantFound && barcode) {
             playFailureSound();
             speakText(`no variant matched`);
+          } else if (fetcher.data.success) {
+            playSuccessSound();
+          } else {
+            playFailureSound();
           }
-        } else if (fetcher.data.success) {
-          playSuccessSound();
-        } else {
-          playFailureSound();
         }
       }
       try {
