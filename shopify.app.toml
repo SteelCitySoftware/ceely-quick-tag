@@ -3,8 +3,8 @@
 client_id = "88f6b1b891090832ebade07bf9e2ff71"
 application_url = "https://jul-wal-issued-margin.trycloudflare.com"
 embedded = true
-name = "ceely-quick-tag"
-handle = "ceely-quick-tag"
+name = "Ceely Quick Tag"
+handle = "brutus-quick-tag"
 
 [webhooks]
 api_version = "2025-01"
