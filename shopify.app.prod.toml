@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "a2578056afc72f5aec95bf05808e9b36"
+client_id = "88f6b1b891090832ebade07bf9e2ff71"
 application_url = "https://ceely-quick-tag.vercel.app/"
 embedded = true
 name = "ceely-quick-tag"
