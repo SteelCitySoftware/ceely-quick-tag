@@ -1133,10 +1133,10 @@ export default function Index() {
               scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
 
               if (!fetcher.data.success) {
-                playFailureSound();
+                //playFailureSound();
                 speakText(`not found`);
               } else if (scannedVariantInventory <= 0) {
-                playFailureSound();
+                //playFailureSound();
                 speakText(`no inventory`);
                 // if (matchedVariant.expirationDisplay?.map.length > 0) {
                 //   speakText(`Expiration Date Batches can be cleared`);
