@@ -830,6 +830,7 @@ export default function Index() {
   const [lastBarcodes, setLastBarcodes] = useState([]);
   const [tag, setTag] = useState("");
   const [results, setResults] = useState([]);
+  const [lastSpokenBarcode, setLastSpokenBarcode] = useState(null);
   const isLoading = ["loading", "submitting"].includes(fetcher.state);
   const [tagStatus, setTagStatus] = useState({});
 
@@ -1118,7 +1119,10 @@ export default function Index() {
             speakText(`multiple variants`);
           }
           matchedVariants.forEach((matchedVariant) => {
-            if (matchedVariant) {
+            if (
+              matchedVariant &&
+              matchedVariant.barcode !== lastSpokenBarcode
+            ) {
               scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
 
               if (!fetcher.data.success) {
@@ -1145,6 +1149,7 @@ export default function Index() {
 
               variantFound = true;
             }
+            setLastSpokenBarcode(matchedVariant.barcode);
           });
         });
 
