@@ -1016,6 +1016,13 @@ export default function Index() {
 
   useEffect(() => {
     if (fetcher.data) {
+      const productId = fetcher.data?.products?.[0]?.id ?? "unknown";
+      const tokenBarcode =
+        fetcher.data?.products
+          ?.flatMap((p) => p.variants.map((v) => v.barcode))
+          .find((b) => b === lastBarcode) ?? lastBarcode;
+
+      const actionToken = `${productId}::${tokenBarcode}`;
       if (
         fetcher.data?.products?.[0]?.id &&
         fetcher.data?.adjustmentResult?.productId
