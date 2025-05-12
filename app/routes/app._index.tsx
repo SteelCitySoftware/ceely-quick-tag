@@ -830,7 +830,7 @@ export default function Index() {
   const [lastBarcodes, setLastBarcodes] = useState([]);
   const [tag, setTag] = useState("");
   const [results, setResults] = useState([]);
-  const [lastSpokenBarcode, setLastSpokenBarcode] = useState(null);
+  const [lastActionToken, setLastActionToken] = useState(null);
   const isLoading = ["loading", "submitting"].includes(fetcher.state);
   const [tagStatus, setTagStatus] = useState({});
 
@@ -844,9 +844,11 @@ export default function Index() {
     setResults([]);
     setLastBarcodes([]); // Clear the barcode array when resetting results
     setLastBarcode(""); // Clear the barcode array when resetting results
+    setLastActionToken(null);
   };
 
   const handleSubmit = (event) => {
+    setLastActionToken(null);
     event.preventDefault();
 
     try {
@@ -1030,139 +1032,140 @@ export default function Index() {
       if (fetcher.data.products && fetcher.data.products.length > 0) {
         let variantFound = false;
 
-        if (fetcher.data.success) {
-          if (fetcher.data?.products) {
-            fetcher.data.products.forEach((product) => {
-              if (!product.variants || !Array.isArray(product.variants)) {
-                product.variants = []; // Prevent errors by ensuring variants is always an array
-              }
-              if (product?.variants) {
-                product.variants.forEach((variant) => {
-                  let variantMessage = ``;
-                  let batchQuantityTotal = 0;
-                  let hasBatches = false;
-                  if (variant.expiration_json?.value) {
-                    const expirationData = JSON.parse(
-                      variant.expiration_json.value,
-                    );
-                    variant.expirationDisplay = expirationData.map((exp) => {
-                      const batchQuantity = exp.quantity; // Default color
-                      const expirationDate = new Date(exp.time);
-                      const today = new Date();
-                      const daysUntilExpiration = Math.ceil(
-                        (expirationDate - today) / (1000 * 60 * 60 * 24),
+        if (actionToken !== lastActionToken) {
+          setLastActionToken(actionToken); // ✅ store to avoid duplicates
+          if (fetcher.data.success) {
+            if (fetcher.data?.products) {
+              fetcher.data.products.forEach((product) => {
+                if (!product.variants || !Array.isArray(product.variants)) {
+                  product.variants = []; // Prevent errors by ensuring variants is always an array
+                }
+                if (product?.variants) {
+                  product.variants.forEach((variant) => {
+                    let variantMessage = ``;
+                    let batchQuantityTotal = 0;
+                    let hasBatches = false;
+                    if (variant.expiration_json?.value) {
+                      const expirationData = JSON.parse(
+                        variant.expiration_json.value,
                       );
-                      hasBatches = true;
-                      let color = "black"; // Default color
-                      let expirationMessage = `A batch expires in ${daysUntilExpiration} days`;
+                      variant.expirationDisplay = expirationData.map((exp) => {
+                        const batchQuantity = exp.quantity; // Default color
+                        const expirationDate = new Date(exp.time);
+                        const today = new Date();
+                        const daysUntilExpiration = Math.ceil(
+                          (expirationDate - today) / (1000 * 60 * 60 * 24),
+                        );
+                        hasBatches = true;
+                        let color = "black"; // Default color
+                        let expirationMessage = `A batch expires in ${daysUntilExpiration} days`;
 
-                      if (daysUntilExpiration < 0) {
-                        color = "red"; // Expired
-                        expirationMessage = `A batch expired ${Math.abs(daysUntilExpiration)} days ago`;
-                      } else if (daysUntilExpiration == 0) {
-                        color = "red"; // Expiring soon
-                        expirationMessage = `A batch expired today`;
-                      } else if (daysUntilExpiration <= 40) {
-                        color = "orange"; // Expiring soon
-                        expirationMessage = `A batch expires in ${daysUntilExpiration} days`;
-                      }
-                      if (batchQuantity == null) {
-                        expirationMessage += ` and isn't tracked.`;
-                      } else {
-                        batchQuantityTotal += batchQuantity;
-                        expirationMessage += ` containing ${batchQuantity} items.`;
-                      }
-                      console.log(
-                        `Expiration Date: ${expirationDate.toLocaleDateString()} - Days Until Expiration: ${daysUntilExpiration} - Color: ${color}`,
-                        `Expiration Message: ${expirationMessage}`,
-                      );
-                      return {
-                        expirationMessage: expirationMessage,
-                        date: expirationDate.toLocaleDateString(),
-                        batchQuantity,
-                        color,
-                      };
-                    });
-                  } else {
-                    variant.expirationDisplay = [
-                      { date: "+ Batch", color: "black" },
-                    ];
-                  }
-                  if (
-                    batchQuantityTotal != variant.inventoryQuantity &&
-                    hasBatches
-                  ) {
-                    variantMessage += ` Batch Inventory Mismatch`;
-                  }
-                  variant.variantMessage = variantMessage;
-                });
+                        if (daysUntilExpiration < 0) {
+                          color = "red"; // Expired
+                          expirationMessage = `A batch expired ${Math.abs(daysUntilExpiration)} days ago`;
+                        } else if (daysUntilExpiration == 0) {
+                          color = "red"; // Expiring soon
+                          expirationMessage = `A batch expired today`;
+                        } else if (daysUntilExpiration <= 40) {
+                          color = "orange"; // Expiring soon
+                          expirationMessage = `A batch expires in ${daysUntilExpiration} days`;
+                        }
+                        if (batchQuantity == null) {
+                          expirationMessage += ` and isn't tracked.`;
+                        } else {
+                          batchQuantityTotal += batchQuantity;
+                          expirationMessage += ` containing ${batchQuantity} items.`;
+                        }
+                        console.log(
+                          `Expiration Date: ${expirationDate.toLocaleDateString()} - Days Until Expiration: ${daysUntilExpiration} - Color: ${color}`,
+                          `Expiration Message: ${expirationMessage}`,
+                        );
+                        return {
+                          expirationMessage: expirationMessage,
+                          date: expirationDate.toLocaleDateString(),
+                          batchQuantity,
+                          color,
+                        };
+                      });
+                    } else {
+                      variant.expirationDisplay = [
+                        { date: "+ Batch", color: "black" },
+                      ];
+                    }
+                    if (
+                      batchQuantityTotal != variant.inventoryQuantity &&
+                      hasBatches
+                    ) {
+                      variantMessage += ` Batch Inventory Mismatch`;
+                    }
+                    variant.variantMessage = variantMessage;
+                  });
+                }
+              });
+            }
+          }
+          if (fetcher.data.products.length > 1 && barcode) {
+            speakText(`multiple products`);
+          }
+          const nonActiveProducts = fetcher.data.products.filter(
+            (product) => product.status != "ACTIVE",
+          );
+          //console.log("All Products:", fetcher.data.products);
+          //console.log("Non-Active Products:", nonActiveProducts);
+          if (nonActiveProducts.length > 0) {
+            speakText(`Non Active ${nonActiveProducts.length}`);
+          }
+          fetcher.data.products.forEach((product) => {
+            const matchedVariants = product.variants.filter(
+              (variant) => variant.barcode === lastBarcode,
+            );
+            if (matchedVariants.length > 1) {
+              speakText(`multiple variants`);
+            }
+            matchedVariants.forEach((matchedVariant) => {
+              if (
+                matchedVariant &&
+                matchedVariant.barcode !== lastSpokenBarcode
+              ) {
+                scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
+
+                if (!fetcher.data.success) {
+                  playFailureSound();
+                  speakText(`not found`);
+                } else if (scannedVariantInventory <= 0) {
+                  playFailureSound();
+                  speakText(`no inventory`);
+                  // if (matchedVariant.expirationDisplay?.map.length > 0) {
+                  //   speakText(`Expiration Date Batches can be cleared`);
+                  // }
+                  matchedVariant.expirationDisplay?.map((exp) => {
+                    speakText(exp.expirationMessage);
+                  });
+                } else {
+                  playSuccessSound();
+                  speakText(`${scannedVariantInventory}`);
+                  matchedVariant.expirationDisplay?.map((exp) => {
+                    speakText(exp.expirationMessage);
+                  });
+                }
+
+                speakText(matchedVariant.variantMessage);
+
+                variantFound = true;
               }
             });
-          }
-        }
-        if (fetcher.data.products.length > 1 && barcode) {
-          speakText(`multiple products`);
-        }
-        const nonActiveProducts = fetcher.data.products.filter(
-          (product) => product.status != "ACTIVE",
-        );
-        //console.log("All Products:", fetcher.data.products);
-        //console.log("Non-Active Products:", nonActiveProducts);
-        if (nonActiveProducts.length > 0) {
-          speakText(`Non Active ${nonActiveProducts.length}`);
-        }
-        fetcher.data.products.forEach((product) => {
-          const matchedVariants = product.variants.filter(
-            (variant) => variant.barcode === lastBarcode,
-          );
-          if (matchedVariants.length > 1) {
-            speakText(`multiple variants`);
-          }
-          matchedVariants.forEach((matchedVariant) => {
-            if (
-              matchedVariant &&
-              matchedVariant.barcode !== lastSpokenBarcode
-            ) {
-              scannedVariantInventory = matchedVariant.inventoryQuantity || 0;
-
-              if (!fetcher.data.success) {
-                playFailureSound();
-                speakText(`not found`);
-              } else if (scannedVariantInventory <= 0) {
-                playFailureSound();
-                speakText(`no inventory`);
-                // if (matchedVariant.expirationDisplay?.map.length > 0) {
-                //   speakText(`Expiration Date Batches can be cleared`);
-                // }
-                matchedVariant.expirationDisplay?.map((exp) => {
-                  speakText(exp.expirationMessage);
-                });
-              } else {
-                playSuccessSound();
-                speakText(`${scannedVariantInventory}`);
-                matchedVariant.expirationDisplay?.map((exp) => {
-                  speakText(exp.expirationMessage);
-                });
-              }
-
-              speakText(matchedVariant.variantMessage);
-
-              variantFound = true;
-            }
-            setLastSpokenBarcode(matchedVariant.barcode);
           });
-        });
 
-        if (!variantFound && barcode) {
+          if (!variantFound && barcode) {
+            playFailureSound();
+            speakText(`no variant matched`);
+          }
+        } else if (fetcher.data.success) {
+          playSuccessSound();
+        } else {
           playFailureSound();
-          speakText(`no variant matched`);
         }
-      } else if (fetcher.data.success) {
-        playSuccessSound();
-      } else {
-        playFailureSound();
       }
-
       try {
         setResults((prevResults) => {
           if (!fetcher.data.success) {
