@@ -3,8 +3,8 @@
 client_id = "88f6b1b891090832ebade07bf9e2ff71"
 application_url = "https://ceely-quick-tag.vercel.app/"
 embedded = true
-name = "ceely-quick-tag"
-handle = "ceely-quick-tag"
+name = "brutus-quick-tag"
+handle = "brutus-quick-tag"
 
 [webhooks]
 api_version = "2025-01"
@@ -32,5 +32,5 @@ redirect_urls = [
 embedded = false
 
 [build]
-dev_store_url = "ceely-software-dev.myshopify.com"
+dev_store_url = "brutus-monroe.myshopify.com"
 automatically_update_urls_on_dev = true
