@@ -1205,9 +1205,28 @@ export default function Index() {
             r.products?.some((p) => p.id === refreshedProductId),
           );
 
-          return isNew
-            ? [{ ...fetcher.data, timestamp }, ...prevResults]
-            : updatedResults;
+          if (isNew) {
+            return [{ ...fetcher.data, timestamp }, ...prevResults];
+          } else {
+            // ✅ Move scanned products to top of their tag record
+            return updatedResults.map((result) => {
+              if (result.tag === fetcher.data.tag) {
+                const newProductIds = new Set(
+                  fetcher.data.products.map((p) => p.id),
+                );
+                const reordered = [
+                  ...fetcher.data.products,
+                  ...result.products.filter((p) => !newProductIds.has(p.id)),
+                ];
+                return {
+                  ...result,
+                  products: reordered,
+                  timestamp,
+                };
+              }
+              return result;
+            });
+          }
         });
       } catch {}
       if (fetcher.data.success && fetcher.data.tag) {
