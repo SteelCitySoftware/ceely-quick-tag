@@ -836,7 +836,7 @@ export default function Index() {
   const [results, setResults] = useState([]);
   const [lastActionToken, setLastActionToken] = useState(null);
   //chatgpt.com/c/681a4430-cee8-8008-bb23-88cfc69716ae
-  https: const isLoading = ["loading", "submitting"].includes(fetcher.state);
+  const isLoading = ["loading", "submitting"].includes(fetcher.state);
   const [tagStatus, setTagStatus] = useState({});
 
   function replaceCharacters(input: string): string {
