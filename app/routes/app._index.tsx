@@ -835,7 +835,6 @@ export default function Index() {
   const [tag, setTag] = useState("");
   const [results, setResults] = useState([]);
   const [lastActionToken, setLastActionToken] = useState(null);
-  //chatgpt.com/c/681a4430-cee8-8008-bb23-88cfc69716ae
   const isLoading = ["loading", "submitting"].includes(fetcher.state);
   const [tagStatus, setTagStatus] = useState({});
 
@@ -1568,33 +1567,27 @@ export default function Index() {
                             {variant.sku}
                           </td>
                           <td>
-                            {variant.expirationDisplay?.map((exp, index) => {
-                              const expirationLink = variantId
-                                ? `https://apps.screenstaring.com/ed/shopify/variant?id=${variantId}`
-                                : null;
-
+                            {(variant.expirationDisplay?.length > 0
+                              ? variant.expirationDisplay
+                              : [{ date: "+ Batch", color: "black" }]
+                            ).map((exp, index) => {
+                              const expirationLink = `https://apps.screenstaring.com/ed/shopify/variant?id=${variantId}`;
                               return (
                                 <span key={index} style={{ color: exp.color }}>
-                                  {expirationLink ? (
-                                    <a
-                                      href={expirationLink}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      style={{
-                                        textDecoration: "none",
-                                        color: exp.color,
-                                      }}
-                                    >
-                                      {exp.date}{" "}
-                                      {exp.batchQuantity ? (
-                                        <span>({exp.batchQuantity})</span>
-                                      ) : (
-                                        ""
-                                      )}
-                                    </a>
-                                  ) : (
-                                    exp.date
-                                  )}
+                                  <a
+                                    href={expirationLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      textDecoration: "none",
+                                      color: exp.color,
+                                    }}
+                                  >
+                                    {exp.date}{" "}
+                                    {exp.batchQuantity != null ? (
+                                      <span>({exp.batchQuantity})</span>
+                                    ) : null}
+                                  </a>
                                 </span>
                               );
                             })}
