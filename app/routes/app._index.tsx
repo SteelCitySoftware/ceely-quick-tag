@@ -1569,7 +1569,7 @@ export default function Index() {
                           <td>
                             {(variant.expirationDisplay?.length > 0
                               ? variant.expirationDisplay
-                              : [{ date: "+ Batch", color: "black" }]
+                              : [{ date: "View Batch", color: "black" }]
                             ).map((exp, index) => {
                               const expirationLink = `https://apps.screenstaring.com/ed/shopify/variant?id=${variantId}`;
                               return (
