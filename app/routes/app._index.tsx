@@ -818,6 +818,7 @@ function InventoryAdjustForm({
         value={inputQty}
         onChange={(e) => setInputQty(Number(e.target.value))}
         style={{ width: "60px" }}
+        className="inventory-adjust-input"  // 👈 Add this
       />
       <button type="submit" disabled={delta === 0}>
         {delta > 0 ? `+${delta}` : delta}

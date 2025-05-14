@@ -10,13 +10,13 @@ export default function useFocusManagement() {
       // Allow focus on buttons or summaries
       if (
         focusedElement !== tagField &&
-        focusedElement !== barcodeField //&&
-        //!["BUTTON", "SUMMARY"].includes(focusedElement?.tagName || "")
+        focusedElement !== barcodeField &&
+        !focusedElement?.classList.contains("inventory-adjust-input") // 👈 Ignore inventory form inputs
       ) {
         // Delay focus reset
         setTimeout(() => {
           barcodeField?.focus();
-        }, 5000); // Adjust delay if needed
+        }, 20000); // Adjust delay if needed
       }
     };
 
