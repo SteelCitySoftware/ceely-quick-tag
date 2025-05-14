@@ -844,11 +844,14 @@ export default function Index() {
 
   const handleReset = () => {
     setResults([]);
-    setLastBarcodes([]); // Clear the barcode array when resetting results
-    setLastBarcode(""); // Clear the barcode array when resetting results
+    setLastBarcodes([]);
+    setLastBarcode("");
     setLastActionToken(null);
-    // This clears the fetcher state (flushes stale data)
-    fetcher.submit({}, { method: "POST" });
+    //setTag("");
+    setBarcode("");
+
+    // Manually clear fetcher data
+    fetcher.data = undefined;
   };
 
   const handleSubmit = (event) => {
