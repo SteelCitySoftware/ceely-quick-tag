@@ -1485,67 +1485,58 @@ export default function Index() {
                             </Button>
                           </td>
                           <td>
-                            <td>
-                              {(
-                                variant.inventoryItem?.inventoryLevels?.edges ??
-                                []
-                              ).map((edge, i, allEdges) => {
-                                const locationName = edge.node.location.name;
-                                const quantities = edge.node.quantities ?? [];
-                                const nonZeroQuantities = quantities.filter(
-                                  (q) =>
-                                    q.name === "available" || q.quantity !== 0,
-                                );
+                            {(
+                              variant.inventoryItem?.inventoryLevels?.edges ??
+                              []
+                            ).map((edge, i, allEdges) => {
+                              const locationName = edge.node.location.name;
+                              const quantities = edge.node.quantities ?? [];
+                              const nonZeroQuantities = quantities.filter(
+                                (q) =>
+                                  q.name === "available" || q.quantity !== 0,
+                              );
 
-                                if (nonZeroQuantities.length === 0) return null;
+                              if (nonZeroQuantities.length === 0) return null;
 
-                                return (
-                                  <div
-                                    key={i}
-                                    style={{ marginBottom: "0.75em" }}
-                                  >
-                                    {allEdges.length > 1 && (
-                                      <strong>{locationName}</strong>
-                                    )}
-                                    <ul
-                                      style={{ paddingLeft: "1em", margin: 0 }}
-                                    >
-                                      {nonZeroQuantities.map((q, j) => {
-                                        const label = q.name
-                                          .split("_")
-                                          .map(
-                                            (part) =>
-                                              part.charAt(0).toUpperCase() +
-                                              part.slice(1),
-                                          )
-                                          .join(" ");
+                              return (
+                                <div key={i} style={{ marginBottom: "0.75em" }}>
+                                  {allEdges.length > 1 && (
+                                    <strong>{locationName}</strong>
+                                  )}
+                                  <ul style={{ paddingLeft: "1em", margin: 0 }}>
+                                    {nonZeroQuantities.map((q, j) => {
+                                      const label = q.name
+                                        .split("_")
+                                        .map(
+                                          (part) =>
+                                            part.charAt(0).toUpperCase() +
+                                            part.slice(1),
+                                        )
+                                        .join(" ");
 
-                                        return (
-                                          <li key={j}>
-                                            {q.name === "available" ? (
-                                              <InventoryAdjustForm
-                                                inventoryLevelName={q.name}
-                                                quantity={q.quantity}
-                                                levelId={edge.node.item.id}
-                                                locationId={
-                                                  edge.node.location.id
-                                                }
-                                                onQuantityUpdate={(newQty) => {
-                                                  q.quantity = newQty;
-                                                  setResults((r) => [...r]);
-                                                }}
-                                              />
-                                            ) : (
-                                              `${label}: ${q.quantity}`
-                                            )}
-                                          </li>
-                                        );
-                                      })}
-                                    </ul>
-                                  </div>
-                                );
-                              })}
-                            {" "}
+                                      return (
+                                        <li key={j}>
+                                          {q.name === "available" ? (
+                                            <InventoryAdjustForm
+                                              inventoryLevelName={q.name}
+                                              quantity={q.quantity}
+                                              levelId={edge.node.item.id}
+                                              locationId={edge.node.location.id}
+                                              onQuantityUpdate={(newQty) => {
+                                                q.quantity = newQty;
+                                                setResults((r) => [...r]);
+                                              }}
+                                            />
+                                          ) : (
+                                            `${label}: ${q.quantity}`
+                                          )}
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </div>
+                              );
+                            })}{" "}
                             {variant.inventoryHistoryUrl && (
                               <Button
                                 icon={PageClockFilledIcon}
