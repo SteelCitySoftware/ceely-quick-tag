@@ -166,6 +166,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
             return {
               ...node,
+              expiration_json: node.expiration_json ?? null,
               inventoryHistoryUrl: node.inventoryItem?.inventoryHistoryUrl,
               inventoryLevels,
             };
@@ -733,8 +734,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
             return {
               ...node,
+              expiration_json: node.expiration_json ?? null,
               inventoryHistoryUrl: node.inventoryItem?.inventoryHistoryUrl,
-              inventoryLevels, // <- this is the new nested array
+              inventoryLevels,
             };
           }),
           totalInventory: product.totalInventory,
@@ -845,6 +847,8 @@ export default function Index() {
     setLastBarcodes([]); // Clear the barcode array when resetting results
     setLastBarcode(""); // Clear the barcode array when resetting results
     setLastActionToken(null);
+    // This clears the fetcher state (flushes stale data)
+    fetcher.submit({}, { method: "POST" });
   };
 
   const handleSubmit = (event) => {
