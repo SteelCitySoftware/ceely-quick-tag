@@ -49,7 +49,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const productId = formData.get("productId");
   const productIds = formData.get("productIds") as string;
   const adjustInventory = formData.get("adjustInventory");
-  const currentQty = parseInt(formData.get("currentQty") as string);
+  //const currentQty = parseInt(formData.get("currentQty") as string);
 
   const result = {
     success: false,
@@ -763,6 +763,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 function InventoryAdjustForm({
   inventoryLevelName,
+] label,
   quantity,
   levelId,
   locationId,
@@ -810,7 +811,7 @@ function InventoryAdjustForm({
       }}
       style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
     >
-      {inventoryLevelName}
+      {label}
       <input
         type="number"
         name="newQty"
@@ -833,7 +834,8 @@ export default function Index() {
   const [tag, setTag] = useState("");
   const [results, setResults] = useState([]);
   const [lastActionToken, setLastActionToken] = useState(null);
-  const isLoading = ["loading", "submitting"].includes(fetcher.state);
+  //chatgpt.com/c/681a4430-cee8-8008-bb23-88cfc69716ae
+  https: const isLoading = ["loading", "submitting"].includes(fetcher.state);
   const [tagStatus, setTagStatus] = useState({});
 
   function replaceCharacters(input: string): string {
@@ -1526,6 +1528,7 @@ export default function Index() {
                                           {q.name === "available" ? (
                                             <InventoryAdjustForm
                                               inventoryLevelName={q.name}
+                                              label={label}
                                               quantity={q.quantity}
                                               levelId={edge.node.item.id}
                                               locationId={edge.node.location.id}
