@@ -1553,8 +1553,59 @@ export default function Index() {
                                               levelId={edge.node.item.id}
                                               locationId={edge.node.location.id}
                                               onQuantityUpdate={(newQty) => {
-                                                q.quantity = newQty;
-                                                setResults((r) => [...r]);
+                                                setResults((prev) =>
+                                                  prev.map((result) => ({
+                                                    ...result,
+                                                    products:
+                                                      result.products.map(
+                                                        (product) => ({
+                                                          ...product,
+                                                          variants:
+                                                            product.variants.map(
+                                                              (variant) => ({
+                                                                ...variant,
+                                                                inventoryLevels:
+                                                                  variant.inventoryLevels.map(
+                                                                    (level) => {
+                                                                      if (
+                                                                        level.inventoryLevelId ===
+                                                                          edge
+                                                                            .node
+                                                                            .item
+                                                                            .id &&
+                                                                        level.locationId ===
+                                                                          edge
+                                                                            .node
+                                                                            .location
+                                                                            .id
+                                                                      ) {
+                                                                        return {
+                                                                          ...level,
+                                                                          quantities:
+                                                                            level.quantities.map(
+                                                                              (
+                                                                                q2,
+                                                                              ) =>
+                                                                                q2.name ===
+                                                                                q.name
+                                                                                  ? {
+                                                                                      ...q2,
+                                                                                      quantity:
+                                                                                        newQty,
+                                                                                    }
+                                                                                  : q2,
+                                                                            ),
+                                                                        };
+                                                                      }
+                                                                      return level;
+                                                                    },
+                                                                  ),
+                                                              }),
+                                                            ),
+                                                        }),
+                                                      ),
+                                                  })),
+                                                );
                                               }}
                                             />
                                           ) : (
