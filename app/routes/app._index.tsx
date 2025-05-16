@@ -1546,6 +1546,7 @@ export default function Index() {
                                         <li key={j}>
                                           {q.name === "available" ? (
                                             <InventoryAdjustForm
+                                              key={`${edge.node.item.id}-${edge.node.location.id}-${q.name}`}
                                               inventoryLevelName={q.name}
                                               label={label}
                                               quantity={q.quantity}
