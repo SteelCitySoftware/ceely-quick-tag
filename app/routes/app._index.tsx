@@ -769,7 +769,7 @@ function InventoryAdjustForm({
   locationId,
   onQuantityUpdate,
 }) {
-  const fetcher = useFetcher({ key: "adjust" });
+  const fetcher = useFetcher();
   const [inputQty, setInputQty] = useState(quantity);
   const delta = inputQty - quantity;
 
