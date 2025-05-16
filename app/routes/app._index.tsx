@@ -814,11 +814,11 @@ function InventoryAdjustForm({
       {label}
       <input
         type="number"
-        name="newQty"
+        name={`newQty-${levelId}-${locationId}`} // Unique name per inventory item/location
         value={inputQty}
         onChange={(e) => setInputQty(Number(e.target.value))}
         style={{ width: "60px" }}
-        className="inventory-adjust-input" // 👈 Add this
+        className="inventory-adjust-input"
       />
       <button type="submit" disabled={delta === 0}>
         {delta > 0 ? `+${delta}` : delta}
@@ -1074,7 +1074,7 @@ export default function Index() {
                         );
                         hasBatches = true;
                         let color = "black"; // Default color
-                        let expirationMessage = `A batch expires in ${daysUntilExpiration} days`;
+                        let expirationMessage = `Batch Expiring in ${daysUntilExpiration} days`;
 
                         if (daysUntilExpiration < 0) {
                           color = "red"; // Expired
