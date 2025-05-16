@@ -769,7 +769,9 @@ function InventoryAdjustForm({
   locationId,
 }) {
   const fetcher = useFetcher();
+  const [originalQty, setOriginalQty] = useState(quantity);
   const [inputQty, setInputQty] = useState(quantity);
+  const delta = inputQty - originalQty;
   const delta = inputQty - quantity;
 
   useEffect(() => {
@@ -778,7 +780,8 @@ function InventoryAdjustForm({
       const productId = fetcher.data?.adjustmentResult?.productId;
 
       if (typeof newQty === "number") {
-        setInputQty(newQty); // ✅ only update this one field
+        setInputQty(newQty); // update the field
+        setOriginalQty(newQty); // reset the base for delta
       }
 
       if (productId) {
