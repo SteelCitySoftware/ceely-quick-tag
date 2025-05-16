@@ -779,13 +779,13 @@ function InventoryAdjustForm({
       const productId = fetcher.data?.adjustmentResult?.productId;
 
       if (typeof newQty === "number") {
-        onQuantityUpdate(newQty);
-        setInputQty(newQty);
+        setInputQty(newQty); // ✅ Only update this instance
       }
 
-      // ✅ Trigger product refresh if ID is returned
       if (productId) {
-        fetcher.submit({ productId }, { method: "POST" });
+        setTimeout(() => {
+          fetcher.submit({ productId }, { method: "POST" });
+        }, 300); // slight delay to prevent focus steal
       }
     }
   }, [fetcher.state, fetcher.data]);
@@ -1553,8 +1553,8 @@ export default function Index() {
                                               levelId={edge.node.item.id}
                                               locationId={edge.node.location.id}
                                               onQuantityUpdate={(newQty) => {
-                                                setResults((prev) =>
-                                                  prev.map((result) => ({
+                                                setResults((prevResults) =>
+                                                  prevResults.map((result) => ({
                                                     ...result,
                                                     products:
                                                       result.products.map(
