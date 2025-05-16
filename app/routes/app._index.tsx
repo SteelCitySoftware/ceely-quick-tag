@@ -767,7 +767,6 @@ function InventoryAdjustForm({
   quantity,
   levelId,
   locationId,
-  onQuantityUpdate,
 }) {
   const fetcher = useFetcher();
   const [inputQty, setInputQty] = useState(quantity);
@@ -779,13 +778,12 @@ function InventoryAdjustForm({
       const productId = fetcher.data?.adjustmentResult?.productId;
 
       if (typeof newQty === "number") {
-        setInputQty(newQty); // ✅ Only update this instance
+        setInputQty(newQty); // ✅ only update this one field
       }
 
       if (productId) {
-        setTimeout(() => {
-          fetcher.submit({ productId }, { method: "POST" });
-        }, 300); // slight delay to prevent focus steal
+        // Optional: refresh the product
+        fetcher.submit({ productId }, { method: "POST" });
       }
     }
   }, [fetcher.state, fetcher.data]);
@@ -803,7 +801,7 @@ function InventoryAdjustForm({
               levelId,
               locationId,
               delta: String(delta),
-              currentQty: String(quantity), // 👈 ADD THIS
+              currentQty: String(quantity),
             },
             { method: "post", encType: "application/x-www-form-urlencoded" },
           );
@@ -814,7 +812,7 @@ function InventoryAdjustForm({
       {label}
       <input
         type="number"
-        name={`newQty-${levelId}-${locationId}`} // Unique name per inventory item/location
+        name={`newQty-${levelId}-${locationId}`}
         value={inputQty}
         onChange={(e) => setInputQty(Number(e.target.value))}
         style={{ width: "60px" }}
@@ -1552,61 +1550,6 @@ export default function Index() {
                                               quantity={q.quantity}
                                               levelId={edge.node.item.id}
                                               locationId={edge.node.location.id}
-                                              onQuantityUpdate={(newQty) => {
-                                                setResults((prevResults) =>
-                                                  prevResults.map((result) => ({
-                                                    ...result,
-                                                    products:
-                                                      result.products.map(
-                                                        (product) => ({
-                                                          ...product,
-                                                          variants:
-                                                            product.variants.map(
-                                                              (variant) => ({
-                                                                ...variant,
-                                                                inventoryLevels:
-                                                                  variant.inventoryLevels.map(
-                                                                    (level) => {
-                                                                      if (
-                                                                        level.inventoryLevelId ===
-                                                                          edge
-                                                                            .node
-                                                                            .item
-                                                                            .id &&
-                                                                        level.locationId ===
-                                                                          edge
-                                                                            .node
-                                                                            .location
-                                                                            .id
-                                                                      ) {
-                                                                        return {
-                                                                          ...level,
-                                                                          quantities:
-                                                                            level.quantities.map(
-                                                                              (
-                                                                                q2,
-                                                                              ) =>
-                                                                                q2.name ===
-                                                                                q.name
-                                                                                  ? {
-                                                                                      ...q2,
-                                                                                      quantity:
-                                                                                        newQty,
-                                                                                    }
-                                                                                  : q2,
-                                                                            ),
-                                                                        };
-                                                                      }
-                                                                      return level;
-                                                                    },
-                                                                  ),
-                                                              }),
-                                                            ),
-                                                        }),
-                                                      ),
-                                                  })),
-                                                );
-                                              }}
                                             />
                                           ) : (
                                             `${label}: ${q.quantity}`
