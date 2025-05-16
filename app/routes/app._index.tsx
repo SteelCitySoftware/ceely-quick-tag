@@ -772,7 +772,6 @@ function InventoryAdjustForm({
   const [originalQty, setOriginalQty] = useState(quantity);
   const [inputQty, setInputQty] = useState(quantity);
   const delta = inputQty - originalQty;
-  const delta = inputQty - quantity;
 
   useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data?.success) {
