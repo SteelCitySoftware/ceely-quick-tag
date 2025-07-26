@@ -7,8 +7,10 @@ import { useActionData, useFetcher } from "@remix-run/react";
 
 // ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
-  return json({});
+  const url = new URL(request.url);
+  const orderNumber = url.searchParams.get("order_number");
+
+  return json({ orderNumber });
 };
 
 // ----- Server: action -----
@@ -28,11 +30,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             node {
               id
               name
-              customer { displayName
-                   quickbooksName: metafield(namespace: "custom", key: "quickbooks_name") {
-                              value
-                            } 
-              }
+              customer {
+  displayName
+}
+metafield(namespace: "custom", key: "quickbooks_name") {
+  value
+}
               createdAt
               fulfillmentStatus
               lineItems(first: 100) {
@@ -67,9 +70,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       orderExportData: {
         name: order.name,
         customer:
-          order.customer?.quickbooksName?.value ||
-          order.customer?.displayName ||
-          "Guest",
+          order.metafield?.value || order.customer?.displayName || "Guest",
         createdAt: order.createdAt,
         fulfillmentStatus: order.fulfillmentStatus,
         lineItems: order.lineItems.edges.map(({ node }) => ({
@@ -89,7 +90,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function OrderExportRoute() {
   const fetcher = useFetcher<typeof action>();
   const data = fetcher.data;
-  const [orderId, setOrderId] = useState("");
+  const { orderNumber } = useLoaderData<typeof loader>();
+  const [orderId, setOrderId] = useState(orderNumber || "");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleFetch = () => {
