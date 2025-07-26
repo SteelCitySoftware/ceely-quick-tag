@@ -172,6 +172,12 @@ export default function OrderExportRoute() {
       "Shipping Charge",
       "Service Date",
     ];
+    const rows = data.orderExportData.lineItems.map((item) => [
+      data.orderExportData.name, //*InvoiceNo
+      data.orderExportData.customer, // *Customer
+      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *InvoiceDate
+      "", // Shipping address
+      "", // Service Date
     const rows = fulfillment.items.map((item) => [
       data.orderExportData.name,
       data.orderExportData.customer,
