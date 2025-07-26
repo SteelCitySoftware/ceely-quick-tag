@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "88f6b1b891090832ebade07bf9e2ff71"
-application_url = "https://ceely-quick-tag.vercel.app/"
+application_url = "https://jul-wal-issued-margin.trycloudflare.com"
 embedded = true
 name = "Ceely Quick Tag"
 handle = "brutus-quick-tag"
@@ -23,9 +23,9 @@ scopes = "read_locations,read_inventory,write_locations,write_inventory,write_pr
 
 [auth]
 redirect_urls = [
-  "https://ceely-quick-tag.vercel.app/auth/callback",
-  "https://ceely-quick-tag.vercel.app/auth/shopify/callback",
-  "https://ceely-quick-tag.vercel.app/api/auth/callback"
+  "https://jul-wal-issued-margin.trycloudflare.com/auth/callback",
+  "https://jul-wal-issued-margin.trycloudflare.com/auth/shopify/callback",
+  "https://jul-wal-issued-margin.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

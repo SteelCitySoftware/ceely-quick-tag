@@ -14,7 +14,7 @@ type = "admin_link"
 # url = "https://yourappdomain.com/path"
 [[extensions.targeting]]
 target = "admin.order-details.action.link"
-url = "/order-export"
+url = "/order-export?order_number={{order.id}}&action=download_csv"
 
 # Valid Extension Targets
 #
