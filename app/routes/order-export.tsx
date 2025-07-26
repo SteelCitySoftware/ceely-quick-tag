@@ -148,8 +148,8 @@ export default function OrderExportRoute() {
       item.title, // Item(Product/Service)
       "", // ItemDescription
       item.quantity, // ItemQuantity
-      item.rate.toFixed(2), // ItemRate
-      (item.quantity * item.rate.toFixed(2)).toFixed(2), // *ItemAmount
+      item.rate, // ItemRate
+      item.quantity * item.rate, // *ItemAmount
       "N", // Taxable
       "", // TaxRate
       "", // Shipping address
@@ -213,8 +213,8 @@ export default function OrderExportRoute() {
             <ul>
               {data.orderExportData.lineItems.map((item, idx) => (
                 <li key={idx}>
-                  {item.quantity} x {item.title} @ ${item.rate.toFixed(2)} = $
-                  {(item.quantity * item.rate.toFixed(2)).toFixed(2)}
+                  {item.quantity} x {item.title} @ ${item.rate} = $
+                  {item.quantity * item.rate}
                 </li>
               ))}
             </ul>
