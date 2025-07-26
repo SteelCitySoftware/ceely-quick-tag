@@ -28,7 +28,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             node {
               id
               name
-              customer { displayName }
+              customer { displayName
+                    metafield(namespace: "custom", key: "quickbooks_name") {
+                              value
+                            } 
+              }
               createdAt
               lineItems(first: 100) {
                 edges {
@@ -58,7 +62,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return json({
       orderExportData: {
         name: order.name,
-        customer: order.customer?.displayName || "Guest",
+        customer:
+          order.customer?.metafield?.value ||
+          order.customer?.displayName ||
+          "Guest",
         createdAt: order.createdAt,
         lineItems: order.lineItems.edges.map(({ node }) => ({
           title: node.title,
@@ -129,7 +136,7 @@ export default function OrderExportRoute() {
       "N", // Taxable
       "", // TaxRate
       "", // Shipping address
-      "", // Ship via
+      "FedEx", // Ship via
       "", // Shipping date
       "", // Tracking no
       "", // Shipping Charge
