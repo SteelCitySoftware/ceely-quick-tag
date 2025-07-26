@@ -23,6 +23,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const orderName = formData.get("orderName")?.toString();
     const orderId = formData.get("orderId")?.toString();
 
+    // Determine whether to query by internal ID or name
     let query;
     if (orderId) {
       query = `id:${orderId}`;
@@ -32,6 +33,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Missing order identifier" }, { status: 400 });
     }
 
+    // Shopify GraphQL query to fetch order, fulfillments, and related metafields
     const orderResponse = await admin.graphql(
       `#graphql
       query getOrderByQuery($query: String!) {
@@ -91,6 +93,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Order not found" }, { status: 404 });
     }
 
+    // Map fulfillments to simplified structure for frontend
     const fulfillments =
       order.fulfillments?.map((f) => ({
         name: f.name,
@@ -127,6 +130,7 @@ export default function OrderExportRoute() {
   const [orderIdState, setOrderIdState] = useState(initialOrderId || "");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Auto-fetch when values are pre-filled from URL
   useEffect(() => {
     if (initialOrderId) {
       setOrderIdState(initialOrderId);
@@ -137,6 +141,7 @@ export default function OrderExportRoute() {
     }
   }, [initialOrderId, orderName]);
 
+  // Submit form to trigger order export
   const handleFetch = () => {
     if (!orderNameState && !orderIdState) return;
     setIsLoading(true);
@@ -146,9 +151,11 @@ export default function OrderExportRoute() {
     );
   };
 
+  // Clean up customer name for safe filenames
   const scrubName = (name: string) =>
     name.replace(/[^a-zA-Z0-9 \\-]/g, "").trim();
 
+  // Generate and download CSV for one fulfillment
   const downloadCSV = (fulfillment) => {
     const headers = [
       "*InvoiceNo",
@@ -172,27 +179,29 @@ export default function OrderExportRoute() {
       "Shipping Charge",
       "Service Date",
     ];
+    // Map each line item to a row for CSV generation
+    // Map each line item to a row for CSV generation
     const rows = fulfillment.items.map((item) => [
-      data.orderExportData.name,
-      data.orderExportData.customer,
-      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"),
-      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"),
-      "",
-      "",
-      "",
-      item.title,
-      "",
-      item.quantity,
-      item.rate.toFixed(2),
-      (item.quantity * item.rate).toFixed(2),
-      "N",
-      "",
-      "",
-      "FedEx",
-      "",
-      "",
-      "",
-      "",
+      data.orderExportData.name, // *InvoiceNo
+      data.orderExportData.customer, // *Customer
+      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *InvoiceDate
+      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *DueDate
+      "", // Terms
+      "", // Location
+      "", // Memo
+      item.title, // Item(Product/Service)
+      "", // ItemDescription
+      item.quantity, // ItemQuantity
+      item.rate.toFixed(2), // ItemRate
+      (item.quantity * item.rate).toFixed(2), // *ItemAmount
+      "N", // Taxable
+      "", // TaxRate
+      "", // Shipping address
+      "FedEx", // Ship via
+      "", // Shipping date
+      "", // Tracking no
+      "", // Shipping Charge
+      "", // Service Date
     ]);
 
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
@@ -213,6 +222,7 @@ export default function OrderExportRoute() {
       title={`QuickBooks Order Export${data?.orderExportData?.name ? ": #" + data.orderExportData.name : ""}`}
     >
       <Card sectioned>
+        {/* Order number input */}
         <TextField
           label="Order Number"
           value={orderNameState}
@@ -220,6 +230,7 @@ export default function OrderExportRoute() {
           autoComplete="off"
           disabled={isLoading}
         />
+        {/* Internal Shopify Order ID input */}
         <TextField
           label="Internal Order ID"
           value={orderIdState}
@@ -227,6 +238,7 @@ export default function OrderExportRoute() {
           autoComplete="off"
           disabled={isLoading}
         />
+        {/* Trigger fetch button */}
         <Button
           onClick={handleFetch}
           loading={fetcher.state !== "idle"}
@@ -235,6 +247,7 @@ export default function OrderExportRoute() {
           Fetch Order
         </Button>
 
+        {/* Render fulfillments if available */}
         {data?.orderExportData?.fulfillments?.map((f, index) => (
           <Card sectioned key={index} title={`Fulfillment: ${f.name}`}>
             <ul>
@@ -251,6 +264,7 @@ export default function OrderExportRoute() {
           </Card>
         ))}
 
+        {/* Show error if applicable */}
         {data?.error && <p style={{ color: "red" }}>⚠️ {data.error}</p>}
       </Card>
     </Page>
