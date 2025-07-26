@@ -3,22 +3,24 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { useState, useEffect } from "react";
 import { TextField, Button, Card, Page } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import { useFetcher, useLoaderData } from "@remix-run/react";
+import { useActionData, useFetcher, useLoaderData } from "@remix-run/react";
 
+// ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const orderNumber = url.searchParams.get("order_number");
-  const action = url.searchParams.get("action");
-  return json({ orderNumber, action });
+
+  return json({ orderNumber });
 };
 
+// ----- Server: action -----
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
 
   if (formData.get("orderExport") === "true") {
-    const orderName = formData.get("orderId")?.toString();
-    const query = `name:${orderName.replace(/^#/, "")}`;
+    const orderName = formData.get("orderId")?.toString(); // e.g., 1001 or #1001
+    const query = `name:${orderName.replace(/^#/, "")}`; // strip leading # if present
 
     const orderResponse = await admin.graphql(
       `#graphql
@@ -28,14 +30,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             node {
               id
               name
-              customer { displayName }
+              customer {
+                displayName
+                quickbooksName: metafield(namespace: "custom", key: "quickbooks_name") {
+                  value
+                 }
+              }
               createdAt
               lineItems(first: 100) {
                 edges {
                   node {
                     title
                     quantity
-                    originalUnitPriceSet { shopMoney { amount } }
+                    originalUnitPriceSet {
+                      shopMoney { amount }
+                    }
                   }
                 }
               }
@@ -46,7 +55,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       { variables: { query } },
     );
 
-    const orderEdges = (await orderResponse.json()).data.orders.edges;
+    const orderEdges = (await orderResponse.json()).data?.orders?.edges;
     const order = orderEdges?.[0]?.node;
 
     if (!order) {
@@ -56,13 +65,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return json({
       orderExportData: {
         name: order.name,
-        customer: order.customer?.displayName || "Guest",
+        customer:
+          order.customer?.quickbooksName?.value ||
+          order.customer?.displayName ||
+          "Guest",
         createdAt: order.createdAt,
         lineItems: order.lineItems.edges.map(({ node }) => ({
           title: node.title,
           quantity: node.quantity,
           rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
         })),
+        poNumber: order?.customerPONumber?.value,
       },
     });
   }
@@ -70,25 +83,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return json({ error: "Invalid submission" }, { status: 400 });
 };
 
+// ----- Client: Component -----
 export default function OrderExportRoute() {
   const fetcher = useFetcher<typeof action>();
   const data = fetcher.data;
-  const { orderNumber, action } = useLoaderData<typeof loader>();
+  const { orderNumber } = useLoaderData<typeof loader>();
   const [orderId, setOrderId] = useState(orderNumber || "");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (orderNumber) {
       setOrderId(orderNumber);
-      setTimeout(handleFetch, 0);
+      setTimeout(() => {
+        handleFetch();
+      }, 0); // defer until after initial render
     }
   }, [orderNumber]);
-
-  useEffect(() => {
-    if (action === "download_csv" && data?.orderExportData) {
-      downloadCSV();
-    }
-  }, [action, data]);
 
   const handleFetch = () => {
     if (!orderId) return;
@@ -127,41 +137,40 @@ export default function OrderExportRoute() {
       "Shipping Charge",
       "Service Date",
     ];
-
     const rows = data.orderExportData.lineItems.map((item) => [
-      data.orderExportData.name,
-      data.orderExportData.customer,
-      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"),
-      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"),
-      "",
-      "",
-      "",
-      item.title,
-      "",
-      item.quantity,
-      item.rate.toFixed(2),
-      (item.quantity * item.rate).toFixed(2),
-      "N",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
+      data.orderExportData.name, //*InvoiceNo
+      data.orderExportData.customer, // *Customer
+      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *InvoiceDate
+      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *DueDate
+      "", // Terms
+      "", // Location
+      "", // Memo
+      item.title, // Item(Product/Service)
+      "", // ItemDescription
+      item.quantity, // ItemQuantity
+      item.rate.toFixed(2), // ItemRate
+      (item.quantity * item.rate.toFixed(2)).toFixed(2), // *ItemAmount
+      "N", // Taxable
+      "", // TaxRate
+      "", // Shipping address
+      "FedEx", // Ship via
+      "", // Shipping date
+      "", // Tracking no
+      "", // Shipping Charge
+      "", // Service Date
     ]);
 
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
+
     a.href = url;
     const customerNameScrubbed = scrubName(data.orderExportData.customer);
     const fileName = `invoice_${data.orderExportData.name}-${customerNameScrubbed}.csv`;
-    a.download = `${fileName}`;
+    a.download = `${fileName}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    setIsLoading(false);
   };
 
   return (
@@ -176,7 +185,11 @@ export default function OrderExportRoute() {
           autoComplete="off"
           disabled={isLoading}
         />
-        <Button onClick={handleFetch} loading={isLoading} primary>
+        <Button
+          onClick={handleFetch}
+          loading={fetcher.state !== "idle"}
+          primary
+        >
           Fetch Order
         </Button>
 
@@ -191,12 +204,17 @@ export default function OrderExportRoute() {
                 {new Date(data.orderExportData.createdAt).toLocaleString()}
               </strong>
             </p>
+            {data.orderExportData.poNumber && (
+              <p>
+                PO #: <strong>{data.orderExportData.poNumber}</strong>
+              </p>
+            )}
             <p>Customer: {data.orderExportData.customer}</p>
             <ul>
               {data.orderExportData.lineItems.map((item, idx) => (
                 <li key={idx}>
                   {item.quantity} x {item.title} @ ${item.rate.toFixed(2)} = $
-                  {(item.quantity * item.rate).toFixed(2)}
+                  {(item.quantity * item.rate.toFixed(2)).toFixed(2)}
                 </li>
               ))}
             </ul>
