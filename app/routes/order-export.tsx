@@ -98,7 +98,10 @@ export default function OrderExportRoute() {
 
   useEffect(() => {
     if (orderNumber) {
-      handleFetch();
+      setOrderId(orderNumber);
+      setTimeout(() => {
+        handleFetch();
+      }, 0); // defer until after initial render
     }
   }, [orderNumber]);
 
