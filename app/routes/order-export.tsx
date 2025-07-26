@@ -50,10 +50,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               lineItems(first: 100) {
                 edges {
                   node {
+                    id
                     title
                     quantity
                     originalUnitPriceSet {
                       shopMoney { amount }
+                    }
+                  }
+                }
+              }
+              fulfillments(first: 10) {
+                name
+                lineItems(first: 100) {
+                  edges {
+                    node {
+                      id
+                      title
+                      quantity
+                      originalUnitPriceSet {
+                        shopMoney { amount }
+                      }
                     }
                   }
                 }
@@ -75,6 +91,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Order not found" }, { status: 404 });
     }
 
+    const fulfillments =
+      order.fulfillments?.map((f) => ({
+        name: f.name,
+        items: f.lineItems.edges.map(({ node }) => ({
+          title: node.title,
+          quantity: node.quantity,
+          rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
+        })),
+      })) || [];
+
     return json({
       orderExportData: {
         name: order.name,
@@ -83,11 +109,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           order.customer?.displayName ||
           "Guest",
         createdAt: order.createdAt,
-        lineItems: order.lineItems.edges.map(({ node }) => ({
-          title: node.title,
-          quantity: node.quantity,
-          rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
-        })),
+        fulfillments,
         poNumber: order?.customerPONumber?.value,
       },
     });
@@ -127,9 +149,7 @@ export default function OrderExportRoute() {
   const scrubName = (name: string) =>
     name.replace(/[^a-zA-Z0-9 \\-]/g, "").trim();
 
-  const downloadCSV = () => {
-    if (!data?.orderExportData) return;
-
+  const downloadCSV = (fulfillment) => {
     const headers = [
       "*InvoiceNo",
       "*Customer",
@@ -156,23 +176,29 @@ export default function OrderExportRoute() {
       data.orderExportData.name, //*InvoiceNo
       data.orderExportData.customer, // *Customer
       new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *InvoiceDate
-      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *DueDate
-      "", // Terms
-      "", // Location
-      "", // Memo
-      item.title, // Item(Product/Service)
-      "", // ItemDescription
-      item.quantity, // ItemQuantity
-      item.rate.toFixed(2), // ItemRate
-      (item.quantity * item.rate.toFixed(2)).toFixed(2), // *ItemAmount
-      "N", // Taxable
-      "", // TaxRate
       "", // Shipping address
-      "FedEx", // Ship via
-      "", // Shipping date
-      "", // Tracking no
-      "", // Shipping Charge
       "", // Service Date
+    const rows = fulfillment.items.map((item) => [
+      data.orderExportData.name,
+      data.orderExportData.customer,
+      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"),
+      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"),
+      "",
+      "",
+      "",
+      item.title,
+      "",
+      item.quantity,
+      item.rate.toFixed(2),
+      (item.quantity * item.rate).toFixed(2),
+      "N",
+      "",
+      "",
+      "FedEx",
+      "",
+      "",
+      "",
+      "",
     ]);
 
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
@@ -182,8 +208,8 @@ export default function OrderExportRoute() {
 
     a.href = url;
     const customerNameScrubbed = scrubName(data.orderExportData.customer);
-    const fileName = `invoice_${data.orderExportData.name}-${customerNameScrubbed}.csv`;
-    a.download = `${fileName}.csv`;
+    const fileName = `invoice_${data.orderExportData.name}-${fulfillment.name}-${customerNameScrubbed}.csv`;
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -215,34 +241,21 @@ export default function OrderExportRoute() {
           Fetch Order
         </Button>
 
-        {data?.orderExportData && (
-          <>
-            <p>
-              Order #: <strong>{data.orderExportData.name}</strong>
-            </p>
-            <p>
-              Created At:{" "}
-              <strong>
-                {new Date(data.orderExportData.createdAt).toLocaleString()}
-              </strong>
-            </p>
-            {data.orderExportData.poNumber && (
-              <p>
-                PO #: <strong>{data.orderExportData.poNumber}</strong>
-              </p>
-            )}
-            <p>Customer: {data.orderExportData.customer}</p>
+        {data?.orderExportData?.fulfillments?.map((f, index) => (
+          <Card sectioned key={index} title={`Fulfillment: ${f.name}`}>
             <ul>
-              {data.orderExportData.lineItems.map((item, idx) => (
+              {f.items.map((item, idx) => (
                 <li key={idx}>
                   {item.quantity} x {item.title} @ ${item.rate.toFixed(2)} = $
                   {(item.quantity * item.rate).toFixed(2)}
                 </li>
               ))}
             </ul>
-            <Button onClick={downloadCSV}>Download QuickBooks CSV</Button>
-          </>
-        )}
+            <Button onClick={() => downloadCSV(f)}>
+              Download CSV for {f.name}
+            </Button>
+          </Card>
+        ))}
 
         {data?.error && <p style={{ color: "red" }}>⚠️ {data.error}</p>}
       </Card>
