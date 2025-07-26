@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { useState } from "react";
 import { TextField, Button, Card, Page } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import { useActionData, useFetcher } from "@remix-run/react";
+import { useActionData, useFetcher, useLoaderData } from "@remix-run/react";
 
 // ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
