@@ -29,7 +29,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               id
               name
               customer { displayName
-                    metafield(namespace: "custom", key: "quickbooks_name") {
+                   quickbooksName: metafield(namespace: "custom", key: "quickbooks_name") {
                               value
                             } 
               }
@@ -45,6 +45,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                   }
                 }
               }
+                customerPONumber: metafield(namespace: "custom", key: "customer_po_number") {
+                                value
+                              } 
             }
           }
         }
@@ -63,7 +66,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       orderExportData: {
         name: order.name,
         customer:
-          order.customer?.metafield?.value ||
+          order.customer?.quickbooksName?.value ||
           order.customer?.displayName ||
           "Guest",
         createdAt: order.createdAt,
@@ -72,6 +75,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           quantity: node.quantity,
           rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
         })),
+        poNumber: order?.customerPONumber?.value,
       },
     });
   }
@@ -127,7 +131,7 @@ export default function OrderExportRoute() {
       data.orderExportData.name, //*InvoiceNo
       data.orderExportData.customer, // *Customer
       new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *InvoiceDate
-      "", // *DueDate
+      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *DueDate
       "", // Terms
       "", // Location
       "", // Memo
@@ -153,7 +157,7 @@ export default function OrderExportRoute() {
 
     a.href = url;
     const customerNameScrubbed = scrubName(data.orderExportData.customer);
-    const fileName = `invoice_${data.orderExportData.name}-${customerNameScrubbed}.csv`;
+    const fileName = `invoice_${data.orderExportData.name}-${data.orderExportData.poNumber}-${customerNameScrubbed}.csv`;
     a.download = `${fileName}.csv`;
     a.click();
     URL.revokeObjectURL(url);
