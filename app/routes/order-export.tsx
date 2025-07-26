@@ -37,7 +37,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                  }
               }
               createdAt
-              fulfillmentStatus
               lineItems(first: 100) {
                 edges {
                   node {
@@ -71,12 +70,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           order.customer?.displayName ||
           "Guest",
         createdAt: order.createdAt,
-        fulfillmentStatus: order.fulfillmentStatus,
         lineItems: order.lineItems.edges.map(({ node }) => ({
           title: node.title,
           quantity: node.quantity,
           rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
         })),
+        poNumber: order?.customerPONumber?.value,
       },
     });
   }
@@ -205,10 +204,11 @@ export default function OrderExportRoute() {
                 {new Date(data.orderExportData.createdAt).toLocaleString()}
               </strong>
             </p>
-            <p>
-              Fulfillment Status:{" "}
-              <strong>{data.orderExportData.fulfillmentStatus}</strong>
-            </p>
+            {data.orderExportData.poNumber && (
+              <p>
+                PO #: <strong>{data.orderExportData.poNumber}</strong>
+              </p>
+            )}
             <p>Customer: {data.orderExportData.customer}</p>
             <ul>
               {data.orderExportData.lineItems.map((item, idx) => (
