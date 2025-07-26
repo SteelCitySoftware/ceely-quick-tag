@@ -61,16 +61,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                   }
                 }
               }
-              fulfillments(first: 10) {
-                name
-                lineItems(first: 100) {
-                  edges {
-                    node {
-                      id
-                      title
-                      quantity
-                      originalUnitPriceSet {
-                        shopMoney { amount }
+              fulfillmentOrders(first: 10) {
+                edges {
+                  node {
+                    id
+                    status
+                    assignedLocation { name }
+                    lineItems(first: 100) {
+                      edges {
+                        node {
+                          id
+                          title
+                          quantity
+                        }
+                      }
+                    }
+                  }
+                }
+              }
                       }
                     }
                   }
@@ -93,16 +101,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Map fulfillments to simplified structure for frontend
+    // Map fulfillment orders to simplified structure for frontend
     const fulfillments =
-      order.fulfillments?.map((f) => ({
-        name: f.name,
-        items: f.lineItems.edges.map(({ node }) => ({
-          title: node.title,
-          quantity: node.quantity,
-          rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
-        })),
-      })) || [];
+      order.fulfillmentOrders?.edges.map((edge, i) => {
+        const f = edge.node;
+        return {
+          name: `F${i + 1}`,
+          items: f.lineItems.edges.map(({ node }) => ({
+            title: node.title,
+            quantity: node.quantity,
+            rate: 0, // Placeholder, since fulfillmentOrders don't include price info
+          })),
+        };
+      }) || [];
 
     return json({
       orderExportData: {
@@ -179,7 +190,6 @@ export default function OrderExportRoute() {
       "Shipping Charge",
       "Service Date",
     ];
-    // Map each line item to a row for CSV generation
     // Map each line item to a row for CSV generation
     const rows = fulfillment.items.map((item) => [
       data.orderExportData.name, // *InvoiceNo
