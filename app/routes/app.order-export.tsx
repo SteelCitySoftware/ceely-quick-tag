@@ -1,28 +1,89 @@
-import { useState, useEffect } from "react";
+import { json } from "@remix-run/node";
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
+import { useState } from "react";
 import { TextField, Button, Card, Page } from "@shopify/polaris";
+import { authenticate } from "~/shopify.server";
+import { useActionData, useFetcher } from "@remix-run/react";
 
-export default function OrderExport() {
+// ----- Server: loader -----
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  await authenticate.admin(request);
+  return json({});
+};
+
+// ----- Server: action -----
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+  const formData = await request.formData();
+
+  if (formData.get("orderExport") === "true") {
+    const orderId = formData.get("orderId")?.toString();
+    const gid = `gid://shopify/Order/${orderId}`;
+
+    const orderResponse = await admin.graphql(
+      `#graphql
+        query getOrder($id: ID!) {
+          order(id: $id) {
+            name
+            customer { displayName }
+            lineItems(first: 100) {
+              edges {
+                node {
+                  title
+                  quantity
+                  originalUnitPriceSet {
+                    shopMoney { amount }
+                  }
+                }
+              }
+            }
+          }
+        }`,
+      { variables: { id: gid } },
+    );
+
+    const orderJson = await orderResponse.json();
+    const order = orderJson.data?.order;
+
+    if (!order) {
+      return json({ error: "Order not found" }, { status: 404 });
+    }
+
+    return json({
+      orderExportData: {
+        name: order.name,
+        customer: order.customer?.displayName || "Guest",
+        lineItems: order.lineItems.edges.map(({ node }) => ({
+          title: node.title,
+          quantity: node.quantity,
+          rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
+        })),
+      },
+    });
+  }
+
+  return json({ error: "Invalid submission" }, { status: 400 });
+};
+
+// ----- Client: Component -----
+export default function OrderExportRoute() {
+  const fetcher = useFetcher<typeof action>();
+  const data = fetcher.data;
   const [orderId, setOrderId] = useState("");
-  const [orderData, setOrderData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchOrder = async () => {
+  const handleFetch = () => {
     if (!orderId) return;
     setIsLoading(true);
-    const response = await fetch("/app/order-export", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ orderExport: "true", orderId }).toString(),
-    });
-    const result = await response.json();
-    setOrderData(result.orderExportData);
-    setIsLoading(false);
+    fetcher.submit(
+      { orderExport: "true", orderId },
+      { method: "POST", encType: "application/x-www-form-urlencoded" },
+    );
   };
 
   const downloadCSV = () => {
-    if (!orderData) return;
+    if (!data?.orderExportData) return;
+
     const headers = [
       "Invoice #",
       "Customer",
@@ -31,9 +92,9 @@ export default function OrderExport() {
       "Rate",
       "Amount",
     ];
-    const rows = orderData.lineItems.map((item) => [
-      orderData.name,
-      orderData.customer,
+    const rows = data.orderExportData.lineItems.map((item) => [
+      data.orderExportData.name,
+      data.orderExportData.customer,
       item.title,
       item.quantity,
       item.rate,
@@ -44,7 +105,7 @@ export default function OrderExport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `invoice_${orderData.name}.csv`;
+    a.download = `invoice_${data.orderExportData.name}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -59,15 +120,19 @@ export default function OrderExport() {
           autoComplete="off"
           disabled={isLoading}
         />
-        <Button onClick={fetchOrder} loading={isLoading} primary>
+        <Button
+          onClick={handleFetch}
+          loading={fetcher.state !== "idle"}
+          primary
+        >
           Fetch Order
         </Button>
 
-        {orderData && (
+        {data?.orderExportData && (
           <>
-            <p>Customer: {orderData.customer}</p>
+            <p>Customer: {data.orderExportData.customer}</p>
             <ul>
-              {orderData.lineItems.map((item, idx) => (
+              {data.orderExportData.lineItems.map((item, idx) => (
                 <li key={idx}>
                   {item.quantity} x {item.title} @ ${item.rate} = $
                   {item.quantity * item.rate}
@@ -77,6 +142,8 @@ export default function OrderExport() {
             <Button onClick={downloadCSV}>Download QuickBooks CSV</Button>
           </>
         )}
+
+        {data?.error && <p style={{ color: "red" }}>⚠️ {data.error}</p>}
       </Card>
     </Page>
   );
