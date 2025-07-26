@@ -29,6 +29,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               id
               name
               customer { displayName }
+              createdAt
               lineItems(first: 100) {
                 edges {
                   node {
@@ -58,6 +59,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       orderExportData: {
         name: order.name,
         customer: order.customer?.displayName || "Guest",
+        createdAt: order.createdAt,
         lineItems: order.lineItems.edges.map(({ node }) => ({
           title: node.title,
           quantity: node.quantity,
@@ -90,21 +92,50 @@ export default function OrderExportRoute() {
     if (!data?.orderExportData) return;
 
     const headers = [
-      "Invoice #",
-      "Customer",
-      "Description",
-      "Quantity",
-      "Rate",
-      "Amount",
+      "*InvoiceNo",
+      "*Customer",
+      "*InvoiceDate",
+      "*DueDate",
+      "Terms",
+      "Location",
+      "Memo",
+      "Item(Product/Service)",
+      "ItemDescription",
+      "ItemQuantity",
+      "ItemRate",
+      "*ItemAmount",
+      "Taxable",
+      "TaxRate",
+      "Shipping address",
+      "Ship via",
+      "Shipping date",
+      "Tracking no",
+      "Shipping Charge",
+      "Service Date",
     ];
     const rows = data.orderExportData.lineItems.map((item) => [
-      data.orderExportData.name,
-      data.orderExportData.customer,
-      item.title,
-      item.quantity,
-      item.rate,
-      item.quantity * item.rate,
+      data.orderExportData.name, //*InvoiceNo
+      data.orderExportData.customer, // *Customer
+      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *InvoiceDate
+      "", // *DueDate
+      "", // Terms
+      "", // Location
+      "", // Memo
+      item.title, // Item(Product/Service)
+      "", // ItemDescription
+      item.quantity, // ItemQuantity
+      item.rate, // ItemRate
+      item.quantity * item.rate, // *ItemAmount
+      "N", // Taxable
+      "", // TaxRate
+      "", // Shipping address
+      "", // Ship via
+      "", // Shipping date
+      "", // Tracking no
+      "", // Shipping Charge
+      "", // Service Date
     ]);
+
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
