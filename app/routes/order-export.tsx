@@ -49,9 +49,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                   }
                 }
               }
-                customerPONumber: metafield(namespace: "custom", key: "customer_po_number") {
-                                value
-                              } 
             }
           }
         }
@@ -80,7 +77,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           quantity: node.quantity,
           rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
         })),
-        poNumber: order?.customerPONumber?.value,
       },
     });
   }
@@ -172,7 +168,7 @@ export default function OrderExportRoute() {
 
     a.href = url;
     const customerNameScrubbed = scrubName(data.orderExportData.customer);
-    const fileName = `invoice_${data.orderExportData.name}-${data.orderExportData.poNumber}-${customerNameScrubbed}.csv`;
+    const fileName = `invoice_${data.orderExportData.name}-${customerNameScrubbed}.csv`;
     a.download = `${fileName}.csv`;
     a.click();
     URL.revokeObjectURL(url);
@@ -213,11 +209,6 @@ export default function OrderExportRoute() {
               Fulfillment Status:{" "}
               <strong>{data.orderExportData.fulfillmentStatus}</strong>
             </p>
-            {data.orderExportData.poNumber && (
-              <p>
-                PO #: <strong>{data.orderExportData.poNumber}</strong>
-              </p>
-            )}
             <p>Customer: {data.orderExportData.customer}</p>
             <ul>
               {data.orderExportData.lineItems.map((item, idx) => (
