@@ -17,33 +17,38 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   if (formData.get("orderExport") === "true") {
-    const orderId = formData.get("orderId")?.toString();
-    const gid = `gid://shopify/Order/${orderId}`;
+    const orderName = formData.get("orderId")?.toString(); // e.g., 1001 or #1001
+    const query = `name:${orderName.replace(/^#/, "")}`; // strip leading # if present
 
     const orderResponse = await admin.graphql(
       `#graphql
-        query getOrder($id: ID!) {
-          order(id: $id) {
-            name
-            customer { displayName }
-            lineItems(first: 100) {
-              edges {
-                node {
-                  title
-                  quantity
-                  originalUnitPriceSet {
-                    shopMoney { amount }
+      query getOrderByName($query: String!) {
+        orders(first: 1, query: $query) {
+          edges {
+            node {
+              id
+              name
+              customer { displayName }
+              lineItems(first: 100) {
+                edges {
+                  node {
+                    title
+                    quantity
+                    originalUnitPriceSet {
+                      shopMoney { amount }
+                    }
                   }
                 }
               }
             }
           }
-        }`,
-      { variables: { id: gid } },
+        }
+      }`,
+      { variables: { query } },
     );
 
-    const orderJson = await orderResponse.json();
-    const order = orderJson.data?.order;
+    const orderEdges = (await orderResponse.json()).data?.orders?.edges;
+    const order = orderEdges?.[0]?.node;
 
     if (!order) {
       return json({ error: "Order not found" }, { status: 404 });
