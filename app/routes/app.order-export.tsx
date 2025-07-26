@@ -9,7 +9,7 @@ export default function OrderExport() {
   const fetchOrder = async () => {
     if (!orderId) return;
     setIsLoading(true);
-    const response = await fetch("/order-export", {
+    const response = await fetch("/app/order-export", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
