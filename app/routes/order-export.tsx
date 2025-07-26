@@ -95,6 +95,9 @@ export default function OrderExportRoute() {
     );
   };
 
+  const scrubName = (name: string) =>
+    name.replace(/[^a-zA-Z0-9 \\-]/g, "").trim();
+
   const downloadCSV = () => {
     if (!data?.orderExportData) return;
 
@@ -147,8 +150,11 @@ export default function OrderExportRoute() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
+
     a.href = url;
-    a.download = `invoice_${data.orderExportData.name}.csv`;
+    const customerNameScrubbed = scrubName(data.orderExportData.customer);
+    const fileName = `invoice_${data.orderExportData.name}-${customerNameScrubbed}.csv`;
+    a.download = `${fileName}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
