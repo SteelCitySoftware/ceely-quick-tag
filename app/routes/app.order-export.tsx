@@ -9,7 +9,7 @@ export default function OrderExportRoute() {
   const fetchOrder = async () => {
     if (!orderId) return;
     setIsLoading(true);
-    const response = await fetch("/order-export", {
+    const response = await fetch("/routes/order-export", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -28,7 +28,7 @@ export default function OrderExportRoute() {
       "Customer",
       "Description",
       "Quantity",
-      "Rate",
+      "Rate"
       "Amount",
     ];
     const rows = orderData.lineItems.map((item) => [
