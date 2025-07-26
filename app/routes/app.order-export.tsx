@@ -28,7 +28,7 @@ export default function OrderExportRoute() {
       "Customer",
       "Description",
       "Quantity",
-      "Rate"
+      "Rate",
       "Amount",
     ];
     const rows = orderData.lineItems.map((item) => [
