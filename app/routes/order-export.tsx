@@ -1,6 +1,6 @@
 import { json } from "@remix-run/node";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TextField, Button, Card, Page } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { useActionData, useFetcher, useLoaderData } from "@remix-run/react";
@@ -31,11 +31,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               id
               name
               customer {
-  displayName
-}
-metafield(namespace: "custom", key: "quickbooks_name") {
-  value
-}
+                displayName
+                quickbooksName: metafield(namespace: "custom", key: "quickbooks_name") {
+                  value
+                 }
+              }
               createdAt
               fulfillmentStatus
               lineItems(first: 100) {
@@ -70,7 +70,9 @@ metafield(namespace: "custom", key: "quickbooks_name") {
       orderExportData: {
         name: order.name,
         customer:
-          order.metafield?.value || order.customer?.displayName || "Guest",
+          order.customer?.quickbooksName?.value ||
+          order.customer?.displayName ||
+          "Guest",
         createdAt: order.createdAt,
         fulfillmentStatus: order.fulfillmentStatus,
         lineItems: order.lineItems.edges.map(({ node }) => ({
@@ -93,6 +95,12 @@ export default function OrderExportRoute() {
   const { orderNumber } = useLoaderData<typeof loader>();
   const [orderId, setOrderId] = useState(orderNumber || "");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (orderNumber) {
+      handleFetch();
+    }
+  }, [orderNumber]);
 
   const handleFetch = () => {
     if (!orderId) return;
