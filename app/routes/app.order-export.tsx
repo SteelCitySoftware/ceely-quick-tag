@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { TextField, Button, Card, Page } from "@shopify/polaris";
 
-export default function OrderExportRoute() {
+export default function OrderExport() {
   const [orderId, setOrderId] = useState("");
   const [orderData, setOrderData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -9,7 +9,7 @@ export default function OrderExportRoute() {
   const fetchOrder = async () => {
     if (!orderId) return;
     setIsLoading(true);
-    const response = await fetch("/routes/order-export", {
+    const response = await fetch("/order-export", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
