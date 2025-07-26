@@ -48,6 +48,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                   }
                 }
               }
+               customerPONumber: metafield(namespace: "custom", key: "customer_po_number") {
+                value 
+              }
             }
           }
         }

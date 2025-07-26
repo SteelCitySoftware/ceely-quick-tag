@@ -14,7 +14,7 @@ type = "admin_link"
 # url = "https://yourappdomain.com/path"
 [[extensions.targeting]]
 target = "admin.order-details.action.link"
-url = "/apps/brutus-quick-tag/order-export?order_number={{order.name}}&action=download_csv"
+url = "/order-export?order_number={{order.id}}&action=download_csv"
 
 # Valid Extension Targets
 #
