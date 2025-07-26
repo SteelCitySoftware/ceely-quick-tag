@@ -3,14 +3,15 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { useState, useEffect } from "react";
 import { TextField, Button, Card, Page } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import { useActionData, useFetcher, useLoaderData } from "@remix-run/react";
+import { useFetcher, useLoaderData } from "@remix-run/react";
 
 // ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
-  const orderNumber = url.searchParams.get("order_number");
+  const orderName = url.searchParams.get("order_number");
+  const orderId = url.searchParams.get("id");
 
-  return json({ orderNumber });
+  return json({ orderName, orderId });
 };
 
 // ----- Server: action -----
@@ -19,12 +20,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   if (formData.get("orderExport") === "true") {
-    const orderName = formData.get("orderId")?.toString(); // e.g., 1001 or #1001
-    const query = `name:${orderName.replace(/^#/, "")}`; // strip leading # if present
+    const orderName = formData.get("orderName")?.toString();
+    const orderId = formData.get("orderId")?.toString();
+
+    let query;
+    if (orderId) {
+      query = `id:${orderId}`;
+    } else if (orderName) {
+      query = `name:${orderName.replace(/^#/, "")}`;
+    } else {
+      return json({ error: "Missing order identifier" }, { status: 400 });
+    }
 
     const orderResponse = await admin.graphql(
       `#graphql
-      query getOrderByName($query: String!) {
+      query getOrderByQuery($query: String!) {
         orders(first: 1, query: $query) {
           edges {
             node {
@@ -34,7 +44,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 displayName
                 quickbooksName: metafield(namespace: "custom", key: "quickbooks_name") {
                   value
-                 }
+                }
               }
               createdAt
               lineItems(first: 100) {
@@ -48,8 +58,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                   }
                 }
               }
-               customerPONumber: metafield(namespace: "custom", key: "customer_po_number") {
-                value 
+              customerPONumber: metafield(namespace: "custom", key: "customer_po_number") {
+                value
               }
             }
           }
@@ -90,24 +100,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function OrderExportRoute() {
   const fetcher = useFetcher<typeof action>();
   const data = fetcher.data;
-  const { orderNumber } = useLoaderData<typeof loader>();
-  const [orderId, setOrderId] = useState(orderNumber || "");
+  const { orderName, orderId: initialOrderId } = useLoaderData<typeof loader>();
+  const [orderNameState, setOrderNameState] = useState(orderName || "");
+  const [orderIdState, setOrderIdState] = useState(initialOrderId || "");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (orderNumber) {
-      setOrderId(orderNumber);
-      setTimeout(() => {
-        handleFetch();
-      }, 0); // defer until after initial render
+    if (initialOrderId) {
+      setOrderIdState(initialOrderId);
+      setTimeout(handleFetch, 0);
+    } else if (orderName) {
+      setOrderNameState(orderName);
+      setTimeout(handleFetch, 0);
     }
-  }, [orderNumber]);
+  }, [initialOrderId, orderName]);
 
   const handleFetch = () => {
-    if (!orderId) return;
+    if (!orderNameState && !orderIdState) return;
     setIsLoading(true);
     fetcher.submit(
-      { orderExport: "true", orderId },
+      { orderExport: "true", orderName: orderNameState, orderId: orderIdState },
       { method: "POST", encType: "application/x-www-form-urlencoded" },
     );
   };
@@ -183,8 +195,15 @@ export default function OrderExportRoute() {
       <Card sectioned>
         <TextField
           label="Order Number"
-          value={orderId}
-          onChange={setOrderId}
+          value={orderNameState}
+          onChange={setOrderNameState}
+          autoComplete="off"
+          disabled={isLoading}
+        />
+        <TextField
+          label="Internal Order ID"
+          value={orderIdState}
+          onChange={setOrderIdState}
           autoComplete="off"
           disabled={isLoading}
         />
@@ -217,7 +236,7 @@ export default function OrderExportRoute() {
               {data.orderExportData.lineItems.map((item, idx) => (
                 <li key={idx}>
                   {item.quantity} x {item.title} @ ${item.rate.toFixed(2)} = $
-                  {(item.quantity * item.rate.toFixed(2)).toFixed(2)}
+                  {(item.quantity * item.rate).toFixed(2)}
                 </li>
               ))}
             </ul>
