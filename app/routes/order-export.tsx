@@ -10,7 +10,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const orderName = url.searchParams.get("order_number");
   const orderId = url.searchParams.get("id");
-
   return json({ orderName, orderId });
 };
 
@@ -57,6 +56,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                     }
                     variant {
                       sku
+                      product {
+                        productType
+                      }
                     }
                   }
                 }
@@ -91,6 +93,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           quantity: node.quantity,
           rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
           sku: node.variant?.sku || "",
+          category: node.variant?.product?.productType || "",
         })),
         poNumber: order?.customerPONumber?.value,
       },
@@ -133,14 +136,7 @@ export default function OrderExportRoute() {
 
   const downloadCSV = () => {
     if (!data?.orderExportData) return;
-
     const headers = [
-      "*InvoiceNo",
-      "*Customer",
-      "*InvoiceDate",
-      "*DueDate",
-      "Terms",
-      "Location",
       "Memo",
       "Item(Product/Service)",
       "ItemDescription",
@@ -155,6 +151,19 @@ export default function OrderExportRoute() {
       "Tracking no",
       "Shipping Charge",
       "Service Date",
+      "Memo", // Memo
+      "Item(Product/Service)", // Item Name (Product/Service)
+      "ItemDescription", // Item Description
+      "ItemRate", // Rate (Price per unit)
+      "*ItemAmount", // Total Amount
+      "Taxable", // Taxable (Y/N)
+      "TaxRate", // Tax Rate
+      "Shipping address", // Shipping Address
+      "Ship via", // Shipping Method
+      "Shipping date", // Shipping Date
+      "Tracking no", // Tracking Number
+      "Shipping Charge", // Shipping Charge
+      "Service Date", // Service Date
     ];
     const rows = data.orderExportData.lineItems.map((item) => [
       data.orderExportData.name, // *InvoiceNo
@@ -178,12 +187,10 @@ export default function OrderExportRoute() {
       "", // Shipping Charge
       "", // Service Date
     ]);
-
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-
     a.href = url;
     const customerNameScrubbed = scrubName(data.orderExportData.customer);
     const fileName = `invoice_${data.orderExportData.name}-${customerNameScrubbed}.csv`;
@@ -194,27 +201,24 @@ export default function OrderExportRoute() {
 
   const downloadProductsCSV = () => {
     if (!data?.orderExportData) return;
-
     const headers = [
-      "Product/Service Name",
-      "Type",
-      "SKU",
-      "Sales price",
-      "Purchase cost",
-      "Income account",
-      "Expense account",
-      "Category",
-      "Quantity on hand",
-      "Quantity as‑of Date",
-      "Sales description",
-      "Purchase description",
-      "Parent",
-      "Option Name",
-      "Option Value",
+      "Product/Service Name", // 0
+      "Type", // 1
+      "SKU", // 2
+      "Sales price", // 3
+      "Purchase cost", // 4
+      "Income account", // 5
+      "Expense account", // 6
+      "Category", // 7
+      "Quantity on hand", // 8
+      "Quantity as‑of Date", // 9
+      "Sales description", // 10
+      "Purchase description", // 11
+      "Parent", // 12
+      "Option Name", // 13
+      "Option Value", // 14
     ];
-
     const today = new Date().toLocaleDateString("en-US");
-
     const rows = data.orderExportData.lineItems.map((item) => [
       item.title, // Product/Service Name
       "Non‑inventory", // Type
@@ -223,7 +227,7 @@ export default function OrderExportRoute() {
       "", // Purchase cost
       "Sales Income", // Income account
       "Cost of Goods Sold", // Expense account
-      "", // Category
+      item.category || "", // Category (from product.productType)
       "", // Quantity on hand
       today, // Quantity as‑of Date
       item.title, // Sales description
@@ -232,7 +236,6 @@ export default function OrderExportRoute() {
       "", // Option Name
       "", // Option Value
     ]);
-
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
