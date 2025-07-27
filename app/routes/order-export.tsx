@@ -55,6 +55,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                     originalUnitPriceSet {
                       shopMoney { amount }
                     }
+                    variant {
+                      sku
+                    }
                   }
                 }
               }
@@ -87,6 +90,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           title: node.title,
           quantity: node.quantity,
           rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
+          sku: node.variant?.sku || "",
         })),
         poNumber: order?.customerPONumber?.value,
       },
@@ -153,7 +157,7 @@ export default function OrderExportRoute() {
       "Service Date",
     ];
     const rows = data.orderExportData.lineItems.map((item) => [
-      data.orderExportData.name, //*InvoiceNo
+      data.orderExportData.name, // *InvoiceNo
       data.orderExportData.customer, // *Customer
       new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *InvoiceDate
       new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *DueDate
@@ -164,7 +168,7 @@ export default function OrderExportRoute() {
       "", // ItemDescription
       item.quantity, // ItemQuantity
       item.rate.toFixed(2), // ItemRate
-      (item.quantity * item.rate.toFixed(2)).toFixed(2), // *ItemAmount
+      (item.quantity * item.rate).toFixed(2), // *ItemAmount
       "N", // Taxable
       "", // TaxRate
       "", // Shipping address
@@ -183,6 +187,59 @@ export default function OrderExportRoute() {
     a.href = url;
     const customerNameScrubbed = scrubName(data.orderExportData.customer);
     const fileName = `invoice_${data.orderExportData.name}-${customerNameScrubbed}.csv`;
+    a.download = `${fileName}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadProductsCSV = () => {
+    if (!data?.orderExportData) return;
+
+    const headers = [
+      "Product/Service Name",
+      "Type",
+      "SKU",
+      "Sales price",
+      "Purchase cost",
+      "Income account",
+      "Expense account",
+      "Category",
+      "Quantity on hand",
+      "Quantity as‑of Date",
+      "Sales description",
+      "Purchase description",
+      "Parent",
+      "Option Name",
+      "Option Value",
+    ];
+
+    const today = new Date().toLocaleDateString("en-US");
+
+    const rows = data.orderExportData.lineItems.map((item) => [
+      item.title, // Product/Service Name
+      "Non‑inventory", // Type
+      item.sku || "", // SKU
+      item.rate.toFixed(2), // Sales price
+      "", // Purchase cost
+      "Sales Income", // Income account
+      "Cost of Goods Sold", // Expense account
+      "", // Category
+      "", // Quantity on hand
+      today, // Quantity as‑of Date
+      item.title, // Sales description
+      "", // Purchase description
+      "", // Parent
+      "", // Option Name
+      "", // Option Value
+    ]);
+
+    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const customerNameScrubbed = scrubName(data.orderExportData.customer);
+    const fileName = `products_${data.orderExportData.name}-${customerNameScrubbed}.csv`;
     a.download = `${fileName}.csv`;
     a.click();
     URL.revokeObjectURL(url);
@@ -241,6 +298,7 @@ export default function OrderExportRoute() {
               ))}
             </ul>
             <Button onClick={downloadCSV}>Download QuickBooks CSV</Button>
+            <Button onClick={downloadProductsCSV}>Download Products CSV</Button>
           </>
         )}
 
