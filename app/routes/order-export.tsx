@@ -1,7 +1,18 @@
 import { json } from "@remix-run/node";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { useState, useEffect, useCallback } from "react";
-import { TextField, Button, Card, Page } from "@shopify/polaris";
+import {
+  TextField,
+  Button,
+  Card,
+  Page,
+  Stack,
+  InlineError,
+  Spinner,
+  Layout,
+  Heading,
+  Banner,
+} from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { useFetcher, useLoaderData } from "@remix-run/react";
 import {
@@ -87,9 +98,14 @@ export default function OrderExportRoute() {
   const [orderNameState, setOrderNameState] = useState(orderName || "");
   const [orderIdState, setOrderIdState] = useState(initialOrderId || "");
   const [isLoading, setIsLoading] = useState(false);
+  const [inputError, setInputError] = useState<string | undefined>();
 
-  // Move handleFetch above useEffect so it is always defined before use
   const handleFetch = useCallback(() => {
+    if (!orderNameState && !orderIdState) {
+      setInputError("Please enter an Order Name or Order ID.");
+      return;
+    }
+    setInputError(undefined);
     setIsLoading(true);
     fetcher.submit(
       {
@@ -120,54 +136,91 @@ export default function OrderExportRoute() {
 
   return (
     <Page title="Order Export">
-      <Card sectioned>
-        <TextField
-          label="Order Name"
-          value={orderNameState}
-          onChange={setOrderNameState}
-          autoComplete="off"
-        />
-        <TextField
-          label="Order ID"
-          value={orderIdState}
-          onChange={setOrderIdState}
-          autoComplete="off"
-        />
-        <Button onClick={handleFetch} loading={isLoading}>
-          Fetch Order
-        </Button>
-      </Card>
-      {data?.orderExportData && (
-        <Card sectioned title="Export">
-          <Button
-            onClick={() =>
-              downloadCSVFile(
-                invoiceCSVHeaders,
-                getInvoiceCSVRows(data.orderExportData),
-                `${sanitizeFilename(data.orderExportData.name)}-invoice.csv`,
-              )
-            }
-          >
-            Download Invoice CSV
-          </Button>
-          <Button
-            onClick={() =>
-              downloadCSVFile(
-                productsCSVHeaders,
-                getProductsCSVRows(data.orderExportData),
-                `${sanitizeFilename(data.orderExportData.name)}-products.csv`,
-              )
-            }
-          >
-            Download Products CSV
-          </Button>
-        </Card>
-      )}
-      {data?.error && (
-        <Card sectioned title="Error" tone="critical">
-          {data.error}
-        </Card>
-      )}
+      <Layout>
+        <Layout.Section>
+          <Card sectioned>
+            <Stack vertical>
+              <Heading>Export Shopify Order to QuickBooks</Heading>
+              <TextField
+                label="Order Name (e.g. #1001)"
+                value={orderNameState}
+                onChange={setOrderNameState}
+                autoComplete="off"
+                disabled={isLoading}
+              />
+              <TextField
+                label="Order ID"
+                value={orderIdState}
+                onChange={setOrderIdState}
+                autoComplete="off"
+                disabled={isLoading}
+              />
+              {inputError && (
+                <InlineError message={inputError} fieldID="orderName" />
+              )}
+              <Button onClick={handleFetch} loading={isLoading} primary>
+                Fetch Order
+              </Button>
+              {isLoading && (
+                <Spinner
+                  accessibilityLabel="Loading order details"
+                  size="small"
+                />
+              )}
+            </Stack>
+          </Card>
+        </Layout.Section>
+
+        <Layout.Section>
+          {data?.orderExportData && (
+            <Card
+              sectioned
+              title={`Export for Order: ${data.orderExportData.name}`}
+            >
+              <Stack vertical>
+                <Banner
+                  status="success"
+                  title="Order loaded and ready for export."
+                />
+                <Button
+                  onClick={() =>
+                    downloadCSVFile(
+                      invoiceCSVHeaders,
+                      getInvoiceCSVRows(data.orderExportData),
+                      `${sanitizeFilename(data.orderExportData.name)}-invoice.csv`,
+                    )
+                  }
+                >
+                  Download Invoice CSV
+                </Button>
+                <Button
+                  onClick={() =>
+                    downloadCSVFile(
+                      productsCSVHeaders,
+                      getProductsCSVRows(data.orderExportData),
+                      `${sanitizeFilename(data.orderExportData.name)}-products.csv`,
+                    )
+                  }
+                >
+                  Download Products CSV
+                </Button>
+                {data.orderExportData.poNumber && (
+                  <p>
+                    <strong>PO Number:</strong> {data.orderExportData.poNumber}
+                  </p>
+                )}
+              </Stack>
+            </Card>
+          )}
+          {data?.error && (
+            <Card sectioned>
+              <Banner status="critical" title="Error">
+                {data.error}
+              </Banner>
+            </Card>
+          )}
+        </Layout.Section>
+      </Layout>
     </Page>
   );
 }
