@@ -9,10 +9,10 @@ import {
   Card,
   Page,
   Layout,
-  Heading,
   Banner,
   InlineError,
   Spinner,
+  Text,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { useFetcher, useLoaderData } from "@remix-run/react";
