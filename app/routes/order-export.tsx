@@ -2,16 +2,17 @@ import { json } from "@remix-run/node";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { useState, useEffect, useCallback } from "react";
 import {
+  BlockStack,
+  InlineStack,
   TextField,
   Button,
   Card,
   Page,
-  Stack,
-  InlineError,
-  Spinner,
   Layout,
   Heading,
   Banner,
+  InlineError,
+  Spinner,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { useFetcher, useLoaderData } from "@remix-run/react";
@@ -139,7 +140,7 @@ export default function OrderExportRoute() {
       <Layout>
         <Layout.Section>
           <Card sectioned>
-            <Stack vertical>
+            <BlockStack gap="400">
               <Heading>Export Shopify Order to QuickBooks</Heading>
               <TextField
                 label="Order Name (e.g. #1001)"
@@ -167,7 +168,7 @@ export default function OrderExportRoute() {
                   size="small"
                 />
               )}
-            </Stack>
+            </BlockStack>
           </Card>
         </Layout.Section>
 
@@ -177,7 +178,7 @@ export default function OrderExportRoute() {
               sectioned
               title={`Export for Order: ${data.orderExportData.name}`}
             >
-              <Stack vertical>
+              <BlockStack gap="400">
                 <Banner
                   status="success"
                   title="Order loaded and ready for export."
@@ -209,7 +210,7 @@ export default function OrderExportRoute() {
                     <strong>PO Number:</strong> {data.orderExportData.poNumber}
                   </p>
                 )}
-              </Stack>
+              </BlockStack>
             </Card>
           )}
           {data?.error && (
