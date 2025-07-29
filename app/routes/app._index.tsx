@@ -51,9 +51,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const productId = formData.get("productId");
   const productIds = formData.get("productIds") as string;
   const adjustInventory = formData.get("adjustInventory");
-  //const currentQty = parseInt(formData.get("currentQty") as string);
 
-  const result = {
+  const result: any = {
     success: false,
     tag,
     storeUrl: "",
@@ -210,7 +209,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         }
         result.success = true;
-        result.products = products;
+        // Note: products not available in this context, remove this line
       }
     } else if (addTag && productId) {
       const storeResponse = await admin.graphql(ADMIN_INFO_QUERY);
@@ -317,7 +316,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         // Process each product returned from the search
         for (const product of products) {
           // Add the user-defined tag to the product
-          const updatedTags = [...new Set([...product.tags, tag])];
+          const updatedTags = Array.from(new Set([...product.tags, tag]));
           const tagResponse = await admin.graphql(
             ADD_TAGS_MUTATION,
             {
@@ -443,10 +442,6 @@ export default function Index() {
   const isLoading = ["loading", "submitting"].includes(fetcher.state);
   const [tagStatus, setTagStatus] = useState({});
 
-  function replaceCharacters(input: string): string {
-    return input.replace(/:/g, " ").replace(/-/g, " dash, ");
-  }
-
   useFocusManagement();
 
   const handleReset = () => {
@@ -568,7 +563,7 @@ export default function Index() {
             ...result,
             products: result.products.map((product) => ({
               ...product,
-              tags: [...new Set([...product.tags, tagToAdd])], // Ensure tag is added
+              tags: Array.from(new Set([...product.tags, tagToAdd])), // Ensure tag is added
             })),
           };
         }
@@ -658,7 +653,7 @@ export default function Index() {
                         const expirationDate = new Date(exp.time);
                         const today = new Date();
                         const daysUntilExpiration = Math.ceil(
-                          (expirationDate - today) / (1000 * 60 * 60 * 24),
+                          (expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
                         );
                         hasBatches = true;
                         let color = "black"; // Default color
@@ -820,12 +815,12 @@ export default function Index() {
       if (fetcher.data.success && fetcher.data.tag) {
         setTagStatus((prev) => ({
           ...prev,
-          [fetcher.data.tag]: "Success",
+          [fetcher.data.tag as string]: "Success",
         }));
       } else if (!fetcher.data.success && fetcher.data.tag) {
         setTagStatus((prev) => ({
           ...prev,
-          [fetcher.data.tag]: "Failure",
+          [fetcher.data.tag as string]: "Failure",
         }));
       }
     }
@@ -1294,7 +1289,7 @@ export default function Index() {
         <Form
           onSubmit={(event) => {
             handleSubmit(event);
-            document.getElementById("barcodeField")?.focus;
+            document.getElementById("barcodeField")?.focus();
           }}
         >
           <TextField
