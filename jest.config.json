@@ -1,0 +1,9 @@
+{
+  "testEnvironment": "node",
+  "roots": ["<rootDir>/tests"],
+  "testMatch": ["**/*.test.js", "**/*.test.ts"],
+  "collectCoverageFrom": [
+    "app/**/*.{js,ts,tsx}",
+    "!app/**/*.d.ts"
+  ]
+}
