@@ -137,10 +137,10 @@ export default function OrderExportRoute() {
   const downloadCSV = () => {
     if (!data?.orderExportData) return;
     const headers = [
-      "*InvoiceNo", // Invoice Number
-      "*Customer", // Customer Name
-      "*InvoiceDate", // Invoice Date
-      "*DueDate", // Due Date
+      "InvoiceNo", // Invoice Number
+      "Customer", // Customer Name
+      "InvoiceDate", // Invoice Date
+      "DueDate", // Due Date
       "Terms", // Payment Terms
       "Location", // Location
       "Memo", // Memo
