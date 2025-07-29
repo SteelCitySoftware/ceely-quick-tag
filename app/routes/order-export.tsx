@@ -234,14 +234,12 @@ export default function OrderExportRoute() {
                 <Text as="h3" variant="headingMd">
                   Line Items
                 </Text>
-                <BlockStack as="ul" gap="200">
+                <BlockStack as="ul" gap="100">
                   {data.orderExportData.lineItems.map((item, idx) => (
                     <li key={idx}>
-                      <Text as="span" fontWeight="bold">
-                        {item.title}
-                      </Text>{" "}
-                      — Qty: {item.quantity}, Rate: ${item.rate.toFixed(2)},
-                      SKU: {item.sku}, Category: {item.category}
+                      <Text as="span">
+                        {item.quantity} x {item.title} @ ${item.rate.toFixed(2)}
+                      </Text>
                     </li>
                   ))}
                   {data.orderExportData.lineItems.length === 0 && (
