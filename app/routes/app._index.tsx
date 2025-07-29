@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { useFetcher, Link } from "@remix-run/react";
+import { useFetcher } from "@remix-run/react";
 import {
   Page,
   Form,
-  Layout,
   Text,
-  Card,
   Button,
   TextField,
-  BlockStack,
   DataTable,
   Icon,
 } from "@shopify/polaris";
@@ -24,20 +21,25 @@ import {
 } from "@shopify/polaris-icons";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import successSound from "./sounds/success.mp3"; // Add your failure sound file in the correct directory
-import failureSound from "./sounds/failure.mp3"; // Add your failure sound file in the correct directory
 
-//custom imports
+// Custom imports
 import useFocusManagement from "../hooks/useFocusManagement";
+import { InventoryAdjustForm } from "../components/InventoryAdjustForm";
+import { playSuccessSound, playFailureSound, speakText, replaceCharacters } from "../utils/helpers";
+import {
+  ADMIN_INFO_QUERY,
+  GET_PRODUCT_QUERY,
+  SEARCH_PRODUCTS_BY_BARCODE_QUERY,
+  SEARCH_PRODUCTS_BY_TAG_QUERY,
+  ADJUST_INVENTORY_MUTATION,
+  REMOVE_TAGS_MUTATION,
+  ADD_TAGS_MUTATION,
+} from "../graphql/shopifyQueries";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
   return null;
 };
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -66,78 +68,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       console.log("999999999");
       // This is a direct refresh for a single product
-      const storeResponse = await admin.graphql(
-        `#graphql
-    query adminInfo {
-      shop {
-        url
-      }
-    }`,
-      );
+      const storeResponse = await admin.graphql(ADMIN_INFO_QUERY);
       const storeData = await storeResponse.json();
       result.storeUrl = storeData.data.shop.url;
 
       const productResponse = await admin.graphql(
-        `#graphql
-    query getProduct($id: ID!) {
-      product(id: $id) {
-        id
-        title
-        status
-        tags
-        totalInventory
-        product_thumbnail: media(first: 1) {
-                  nodes {
-                    preview {
-                      image {
-                        url(transform: {maxWidth: 50})
-                      }
-                    }
-                  }
-                }
-        product_location: metafield(namespace: "custom", key: "product_location") {
-                  value
-                }
-        variants(first: 50) {
-          edges {
-            node {
-              id
-              title
-              barcode
-              sku
-              inventoryQuantity
-              variant_thumbnail: image {
-                        url(transform: {maxWidth: 50})
-                      }
-              availableForSale
-              inventoryItem {
-                id
-                inventoryHistoryUrl
-                inventoryLevels(first: 2) {
-                  edges {
-                    node {
-                      item { id }
-                      location { id name }
-                        quantities(names: ["available", "incoming", "committed", "damaged", "on_hand", "quality_control", "reserved", "safety_stock"]) {
-                        id
-                        name
-                        quantity
-                      }
-                    }
-                  }
-                }
-              }
-              variant_location: metafield(namespace: "custom", key: "variant_location") {
-                value
-              }
-              expiration_json: metafield(namespace: "expiration_dates", key: "allocations") {
-                value
-              }
-            }
-          }
-        }
-      }
-    }`,
+        GET_PRODUCT_QUERY,
         { variables: { id: productId } },
       );
 
@@ -184,44 +120,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const delta = parseInt(formData.get("delta") as string);
 
       const adjResponse = await admin.graphql(
-        `#graphql
-  mutation adjustInventory($inventoryLevelName:String!, $levelId: ID!, $locationId: ID!, $delta: Int!) {
-            inventoryAdjustQuantities(
-              input: {
-                reason: "correction",
-                name: $inventoryLevelName,
-                changes: [{
-                  inventoryItemId: $levelId,
-                  locationId: $locationId,
-                  delta: $delta
-                }]
-              }
-            ) {
-              inventoryAdjustmentGroup {
-                changes {
-                  delta
-                  name
-                  quantityAfterChange
-                  location {
-                    id
-                    name
-                  }
-                  item {
-                    variant {
-                      title
-                      product {
-                        title
-                        id
-                      }
-                    }
-                  }
-                }
-              }
-              userErrors {
-                message
-              }
-            }
-          }`,
+        ADJUST_INVENTORY_MUTATION,
         {
           variables: {
             inventoryLevelName,
@@ -258,28 +157,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     if (deleteTag && productId) {
-      const storeResponse = await admin.graphql(
-        `#graphql
-            query adminInfo {
-              shop {
-                url
-              }
-            }`,
-      );
+      const storeResponse = await admin.graphql(ADMIN_INFO_QUERY);
 
       const storeData = await storeResponse.json();
       result.storeUrl = storeData.data.shop.url;
 
       // Remove the tag from the product
       const deleteResponse = await admin.graphql(
-        `#graphql
-        mutation removeTags($id: ID!, $tags: [String!]!) {
-          tagsRemove(id: $id, tags: $tags) {
-            userErrors {
-              message
-            }
-          }
-        }`,
+        REMOVE_TAGS_MUTATION,
         {
           variables: {
             id: productId,
@@ -295,14 +180,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         result.success = true;
       }
     } else if (deleteTag && formData.get("bulkDelete") === "true") {
-      const storeResponse = await admin.graphql(
-        `#graphql
-        query adminInfo {
-          shop {
-            url
-          }
-        }`,
-      );
+      const storeResponse = await admin.graphql(ADMIN_INFO_QUERY);
 
       const storeData = await storeResponse.json();
       result.storeUrl = storeData.data.shop.url;
@@ -315,14 +193,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       } else {
         for (let i = 0; i < ids.length; i++) {
           const deleteResponse = await admin.graphql(
-            `#graphql
-        mutation removeTags($id: ID!, $tags: [String!]!) {
-          tagsRemove(id: $id, tags: $tags) {
-            userErrors {
-              message
-            }
-          }
-        }`,
+            REMOVE_TAGS_MUTATION,
             {
               variables: {
                 id: ids[i],
@@ -342,31 +213,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         result.products = products;
       }
     } else if (addTag && productId) {
-      const storeResponse = await admin.graphql(
-        `#graphql
-            query adminInfo {
-              shop {
-                url
-              }
-            }`,
-      );
+      const storeResponse = await admin.graphql(ADMIN_INFO_QUERY);
 
       const storeData = await storeResponse.json();
       result.storeUrl = storeData.data.shop.url;
 
       // Add the tag back to the product
       const addResponse = await admin.graphql(
-        `#graphql
-        mutation addTags($id: ID!, $tags: [String!]!) {
-          tagsAdd(id: $id, tags: $tags) {
-            node {
-              id
-            }
-            userErrors {
-              message
-            }
-          }
-        }`,
+        ADD_TAGS_MUTATION,
         {
           variables: {
             id: productId,
@@ -382,14 +236,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         result.success = true;
       }
     } else if (addTag && formData.get("bulkAdd") === "true") {
-      const storeResponse = await admin.graphql(
-        `#graphql
-        query adminInfo {
-          shop {
-            url
-          }
-        }`,
-      );
+      const storeResponse = await admin.graphql(ADMIN_INFO_QUERY);
       const storeData = await storeResponse.json();
       result.storeUrl = storeData.data.shop.url;
       let ids: string[] = [];
@@ -401,17 +248,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         for (let i = 0; i < ids.length; i++) {
           try {
             const addResponse = await admin.graphql(
-              `#graphql
-        mutation addTags($id: ID!, $tags: [String!]!) {
-          tagsAdd(id: $id, tags: $tags) {
-            node {
-              id
-            }
-            userErrors {
-              message
-            }
-          }
-        }`,
+              ADD_TAGS_MUTATION,
               {
                 variables: {
                   id: ids[i],
@@ -443,92 +280,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } else if (tag && barcode) {
       // Fetch the store URL
 
-      const storeResponse = await admin.graphql(
-        `#graphql
-            query adminInfo {
-              shop {
-                url
-              }
-            }`,
-      );
+      const storeResponse = await admin.graphql(ADMIN_INFO_QUERY);
 
       const storeData = await storeResponse.json();
       result.storeUrl = storeData.data.shop.url;
 
       // Search for the product by barcode
       const searchResponse = await admin.graphql(
-        `#graphql
-        query searchProductsByBarcode($queryString: String) {
-          products(first: 75, query: $queryString) {
-            edges {
-              node {
-                id
-                title
-                featuredMedia {
-                  id
-                }
-                status
-                tags
-                totalInventory
-                product_thumbnail: media(first: 1) {
-                  nodes {
-                    preview {
-                      image {
-                        url(transform: {maxWidth: 50})
-                      }
-                    }
-                  }
-                }
-                product_location: metafield(namespace: "custom", key: "product_location") {
-                  value
-                }
-                variants(first: 50) {
-                  edges {
-                    node {
-                      id
-                      title
-                      barcode
-                      sku
-                      inventoryQuantity
-                      variant_thumbnail: image {
-                        url(transform: {maxWidth: 50})
-                      }
-                      availableForSale
-                      inventoryItem {
-                        id
-                        inventoryHistoryUrl
-                        inventoryLevels(first: 2) {
-                          edges {
-                            node {
-                              item {
-                                id
-                              }
-                              location {
-                                id
-                                name
-                              }
-                              quantities(names: ["available", "incoming", "committed", "damaged", "on_hand", "quality_control", "reserved", "safety_stock"]) {
-                                id
-                                name
-                                quantity
-                              }
-                            }
-                          }
-                        }
-                      }
-                      variant_location: metafield(namespace: "custom", key: "variant_location") {
-                        value
-                      }
-                      expiration_json: metafield(namespace: "expiration_dates", key: "allocations") {
-                        value
-                      }
-                    }  
-                  }
-                }
-              }
-            }
-          }
-        }`,
+        SEARCH_PRODUCTS_BY_BARCODE_QUERY,
         {
           variables: {
             queryString: `barcode:${barcode}`,
@@ -560,17 +319,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           // Add the user-defined tag to the product
           const updatedTags = [...new Set([...product.tags, tag])];
           const tagResponse = await admin.graphql(
-            `#graphql
-          mutation addTags($id: ID!, $tags: [String!]!) {
-            tagsAdd(id: $id, tags: $tags) {
-              node {
-                id
-              }
-              userErrors {
-                message
-              }
-            }
-          }`,
+            ADD_TAGS_MUTATION,
             {
               variables: {
                 id: product.id,
@@ -614,92 +363,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     } else if (tag && !barcode) {
       // Fetch the store URL
-      const storeResponse = await admin.graphql(
-        `#graphql
-        query adminInfo {
-          shop {
-            url
-          }
-        }`,
-      );
+      const storeResponse = await admin.graphql(ADMIN_INFO_QUERY);
 
       const storeData = await storeResponse.json();
       result.storeUrl = storeData.data.shop.url;
 
       // Search for products by tag
       const tagSearchResponse = await admin.graphql(
-        `#graphql
-          query searchProductsByTag($queryString: String) {
-          products(first: 75, query: $queryString) {
-            edges {
-              node {
-                id
-                title
-                featuredMedia {
-                  id
-                }
-                status
-                tags
-                totalInventory
-                product_thumbnail: media(first: 1) {
-                  nodes {
-                    preview {
-                      image {
-                        url(transform: {maxWidth: 50})
-                      }
-                    }
-                  }
-                }
-                product_location: metafield(namespace: "custom", key: "product_location") {
-                  value
-                }
-                variants(first: 50) {
-                  edges {
-                    node {
-                      id
-                      title
-                      barcode
-                      sku
-                      inventoryQuantity
-                      variant_thumbnail: image {
-                        url(transform: {maxWidth: 50})
-                      }
-                      availableForSale
-                      inventoryItem {
-                        id
-                        inventoryHistoryUrl
-                        inventoryLevels(first: 2) {
-                          edges {
-                            node {
-                              item {
-                                id
-                              }
-                              location {
-                                id
-                                name
-                              }
-                              quantities(names: ["available", "incoming", "committed", "damaged", "on_hand", "quality_control", "reserved", "safety_stock"]) {
-                                id
-                                name
-                                quantity
-                              }
-                            }
-                          }
-                        }
-                      }
-                      variant_location: metafield(namespace: "custom", key: "variant_location") {
-                        value
-                      }
-                      expiration_json: metafield(namespace: "expiration_dates", key: "allocations") {
-                        value
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }`,
+        SEARCH_PRODUCTS_BY_TAG_QUERY,
         {
           variables: {
             queryString: `tag:\"${tag}\"`,
@@ -760,72 +431,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   return result;
 };
-
-function InventoryAdjustForm({
-  inventoryLevelName,
-  label,
-  quantity,
-  levelId,
-  locationId,
-}) {
-  const fetcher = useFetcher();
-  const [originalQty, setOriginalQty] = useState(quantity);
-  const [inputQty, setInputQty] = useState(quantity);
-  const delta = inputQty - originalQty;
-
-  useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data?.success) {
-      const newQty = fetcher.data?.adjustmentResult?.quantityAfterChange;
-      const productId = fetcher.data?.adjustmentResult?.productId;
-
-      if (typeof newQty === "number") {
-        setInputQty(newQty); // update the field
-        setOriginalQty(newQty); // reset the base for delta
-      }
-
-      if (productId) {
-        // Optional: refresh the product
-        fetcher.submit({ productId }, { method: "POST" });
-      }
-    }
-  }, [fetcher.state, fetcher.data]);
-
-  return (
-    <form
-      method="post"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!isNaN(delta) && delta !== 0) {
-          fetcher.submit(
-            {
-              adjustInventory: "true",
-              inventoryLevelName,
-              levelId,
-              locationId,
-              delta: String(delta),
-              currentQty: String(quantity),
-            },
-            { method: "post", encType: "application/x-www-form-urlencoded" },
-          );
-        }
-      }}
-      style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
-    >
-      {label}
-      <input
-        type="number"
-        name={`newQty-${levelId}-${locationId}`}
-        value={inputQty}
-        onChange={(e) => setInputQty(Number(e.target.value))}
-        style={{ width: "60px" }}
-        className="inventory-adjust-input"
-      />
-      <button type="submit" disabled={delta === 0}>
-        {delta > 0 ? `+${delta}` : delta}
-      </button>
-    </form>
-  );
-}
 
 export default function Index() {
   const fetcher = useFetcher<typeof action>({ key: "adjust" });
@@ -986,23 +591,6 @@ export default function Index() {
         [tagToAdd]: "Readded",
       },
     }));
-  };
-  const playFailureSound = () => {
-    const audio = new Audio(failureSound);
-    audio.play();
-  };
-  const playSuccessSound = () => {
-    const audio = new Audio(successSound);
-    audio.play();
-  };
-
-  const speakText = (text) => {
-    if ("speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      window.speechSynthesis.speak(utterance);
-    } else {
-      console.error("Speech synthesis is not supported in this browser.");
-    }
   };
 
   /*   useEffect(() => {
