@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { useState, useEffect, useCallback } from "react";
 import {
   BlockStack,
-  InlineStack,
+  Text,
   TextField,
   Button,
   Card,
@@ -12,7 +12,6 @@ import {
   Banner,
   InlineError,
   Spinner,
-  Text,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { useFetcher, useLoaderData } from "@remix-run/react";
@@ -100,6 +99,7 @@ export default function OrderExportRoute() {
   const [orderIdState, setOrderIdState] = useState(initialOrderId || "");
   const [isLoading, setIsLoading] = useState(false);
   const [inputError, setInputError] = useState<string | undefined>();
+  const [showDetails, setShowDetails] = useState(false);
 
   const handleFetch = useCallback(() => {
     if (!orderNameState && !orderIdState) {
@@ -108,6 +108,7 @@ export default function OrderExportRoute() {
     }
     setInputError(undefined);
     setIsLoading(true);
+    setShowDetails(false);
     fetcher.submit(
       {
         orderExport: "true",
@@ -132,8 +133,9 @@ export default function OrderExportRoute() {
   useEffect(() => {
     if (fetcher.state === "idle") {
       setIsLoading(false);
+      if (fetcher.data?.orderExportData) setShowDetails(true);
     }
-  }, [fetcher.state]);
+  }, [fetcher.state, fetcher.data]);
 
   return (
     <Page title="Order Export">
@@ -143,6 +145,11 @@ export default function OrderExportRoute() {
             <BlockStack gap="400">
               <Text as="h2" variant="headingLg">
                 Export Shopify Order to QuickBooks
+              </Text>
+              <Text as="p">
+                Enter an Order Name (like <code>#1001</code>) or an Order ID to
+                fetch the order and export details in QuickBooks-friendly CSV
+                format.
               </Text>
               <TextField
                 label="Order Name (e.g. #1001)"
@@ -175,7 +182,7 @@ export default function OrderExportRoute() {
         </Layout.Section>
 
         <Layout.Section>
-          {data?.orderExportData && (
+          {showDetails && data?.orderExportData && (
             <Card
               sectioned
               title={`Export for Order: ${data.orderExportData.name}`}
@@ -185,6 +192,21 @@ export default function OrderExportRoute() {
                   status="success"
                   title="Order loaded and ready for export."
                 />
+                <Text as="h3" variant="headingMd">
+                  Customer:{" "}
+                  <Text as="span" fontWeight="bold">
+                    {data.orderExportData.customer}
+                  </Text>
+                </Text>
+                <Text as="p">
+                  Created At:{" "}
+                  {new Date(data.orderExportData.createdAt).toLocaleString()}
+                </Text>
+                {data.orderExportData.poNumber && (
+                  <Text as="p">
+                    <strong>PO Number:</strong> {data.orderExportData.poNumber}
+                  </Text>
+                )}
                 <Button
                   onClick={() =>
                     downloadCSVFile(
@@ -193,6 +215,7 @@ export default function OrderExportRoute() {
                       `${sanitizeFilename(data.orderExportData.name)}-invoice.csv`,
                     )
                   }
+                  size="medium"
                 >
                   Download Invoice CSV
                 </Button>
@@ -204,14 +227,27 @@ export default function OrderExportRoute() {
                       `${sanitizeFilename(data.orderExportData.name)}-products.csv`,
                     )
                   }
+                  size="medium"
                 >
                   Download Products CSV
                 </Button>
-                {data.orderExportData.poNumber && (
-                  <p>
-                    <strong>PO Number:</strong> {data.orderExportData.poNumber}
-                  </p>
-                )}
+                <Text as="h3" variant="headingMd">
+                  Line Items
+                </Text>
+                <BlockStack as="ul" gap="200">
+                  {data.orderExportData.lineItems.map((item, idx) => (
+                    <li key={idx}>
+                      <Text as="span" fontWeight="bold">
+                        {item.title}
+                      </Text>{" "}
+                      — Qty: {item.quantity}, Rate: ${item.rate.toFixed(2)},
+                      SKU: {item.sku}, Category: {item.category}
+                    </li>
+                  ))}
+                  {data.orderExportData.lineItems.length === 0 && (
+                    <Text as="p">No line items found for this order.</Text>
+                  )}
+                </BlockStack>
               </BlockStack>
             </Card>
           )}
