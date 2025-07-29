@@ -1,6 +1,6 @@
 import { json } from "@remix-run/node";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { TextField, Button, Card, Page } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { useFetcher, useLoaderData } from "@remix-run/react";
@@ -51,6 +51,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Order not found" }, { status: 404 });
     }
 
+    // Extra null checks for safety
     return json({
       orderExportData: {
         name: order.name,
@@ -59,13 +60,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           order.customer?.displayName ||
           "Guest",
         createdAt: order.createdAt,
-        lineItems: order.lineItems.edges.map(({ node }) => ({
-          title: node.title,
-          quantity: node.quantity,
-          rate: parseFloat(node.originalUnitPriceSet.shopMoney.amount),
-          sku: node.variant?.sku || "",
-          category: node.variant?.product?.productType || "",
-        })),
+        lineItems: Array.isArray(order.lineItems?.edges)
+          ? order.lineItems.edges.map(({ node }) => ({
+              title: node.title,
+              quantity: node.quantity,
+              rate: parseFloat(
+                node.originalUnitPriceSet?.shopMoney?.amount ?? "0",
+              ),
+              sku: node.variant?.sku || "",
+              category: node.variant?.product?.productType || "",
+            }))
+          : [],
         poNumber: order?.customerPONumber?.value,
       },
     });
@@ -83,6 +88,19 @@ export default function OrderExportRoute() {
   const [orderIdState, setOrderIdState] = useState(initialOrderId || "");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Move handleFetch above useEffect so it is always defined before use
+  const handleFetch = useCallback(() => {
+    setIsLoading(true);
+    fetcher.submit(
+      {
+        orderExport: "true",
+        orderName: orderNameState,
+        orderId: orderIdState,
+      },
+      { method: "post" },
+    );
+  }, [fetcher, orderNameState, orderIdState]);
+
   useEffect(() => {
     if (initialOrderId) {
       setOrderIdState(initialOrderId);
@@ -94,98 +112,62 @@ export default function OrderExportRoute() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialOrderId, orderName]);
 
-  const handleFetch = () => {
-    if (!orderNameState && !orderIdState) return;
-    setIsLoading(true);
-    fetcher.submit(
-      { orderExport: "true", orderName: orderNameState, orderId: orderIdState },
-      { method: "POST", encType: "application/x-www-form-urlencoded" },
-    );
-  };
-
   useEffect(() => {
-    if (fetcher.state === "idle") setIsLoading(false);
+    if (fetcher.state === "idle") {
+      setIsLoading(false);
+    }
   }, [fetcher.state]);
 
-  const downloadCSV = () => {
-    if (!data?.orderExportData) return;
-    const fileName = `invoice_${data.orderExportData.name}-${sanitizeFilename(data.orderExportData.customer)}.csv`;
-    downloadCSVFile(
-      invoiceCSVHeaders,
-      getInvoiceCSVRows(data.orderExportData),
-      fileName,
-    );
-  };
-
-  const downloadProductsCSV = () => {
-    if (!data?.orderExportData) return;
-    const fileName = `products_${data.orderExportData.name}-${sanitizeFilename(data.orderExportData.customer)}.csv`;
-    downloadCSVFile(
-      productsCSVHeaders,
-      getProductsCSVRows(data.orderExportData),
-      fileName,
-    );
-  };
-
   return (
-    <Page
-      title={`QuickBooks Order Export${data?.orderExportData?.name ? ": #" + data.orderExportData.name : ""}`}
-    >
+    <Page title="Order Export">
       <Card sectioned>
         <TextField
-          label="Order Number"
+          label="Order Name"
           value={orderNameState}
           onChange={setOrderNameState}
           autoComplete="off"
-          disabled={isLoading}
         />
         <TextField
-          label="Internal Order ID"
+          label="Order ID"
           value={orderIdState}
           onChange={setOrderIdState}
           autoComplete="off"
-          disabled={isLoading}
         />
-        <Button
-          onClick={handleFetch}
-          loading={fetcher.state !== "idle"}
-          primary
-        >
+        <Button onClick={handleFetch} loading={isLoading}>
           Fetch Order
         </Button>
-
-        {data?.orderExportData && (
-          <>
-            <p>
-              Order #: <strong>{data.orderExportData.name}</strong>
-            </p>
-            <p>
-              Created At:{" "}
-              <strong>
-                {new Date(data.orderExportData.createdAt).toLocaleString()}
-              </strong>
-            </p>
-            {data.orderExportData.poNumber && (
-              <p>
-                PO #: <strong>{data.orderExportData.poNumber}</strong>
-              </p>
-            )}
-            <p>Customer: {data.orderExportData.customer}</p>
-            <ul>
-              {data.orderExportData.lineItems.map((item, idx) => (
-                <li key={idx}>
-                  {item.quantity} x {item.title} @ ${item.rate.toFixed(2)} = $
-                  {(item.quantity * item.rate).toFixed(2)}
-                </li>
-              ))}
-            </ul>
-            <Button onClick={downloadCSV}>Download QuickBooks CSV</Button>
-            <Button onClick={downloadProductsCSV}>Download Products CSV</Button>
-          </>
-        )}
-
-        {data?.error && <p style={{ color: "red" }}>⚠️ {data.error}</p>}
       </Card>
+      {data?.orderExportData && (
+        <Card sectioned title="Export">
+          <Button
+            onClick={() =>
+              downloadCSVFile(
+                invoiceCSVHeaders,
+                getInvoiceCSVRows(data.orderExportData),
+                `${sanitizeFilename(data.orderExportData.name)}-invoice.csv`,
+              )
+            }
+          >
+            Download Invoice CSV
+          </Button>
+          <Button
+            onClick={() =>
+              downloadCSVFile(
+                productsCSVHeaders,
+                getProductsCSVRows(data.orderExportData),
+                `${sanitizeFilename(data.orderExportData.name)}-products.csv`,
+              )
+            }
+          >
+            Download Products CSV
+          </Button>
+        </Card>
+      )}
+      {data?.error && (
+        <Card sectioned title="Error" tone="critical">
+          {data.error}
+        </Card>
+      )}
     </Page>
   );
 }
