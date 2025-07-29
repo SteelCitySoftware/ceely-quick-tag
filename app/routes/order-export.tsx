@@ -137,23 +137,16 @@ export default function OrderExportRoute() {
   const downloadCSV = () => {
     if (!data?.orderExportData) return;
     const headers = [
-      "Memo",
-      "Item(Product/Service)",
-      "ItemDescription",
-      "ItemQuantity",
-      "ItemRate",
-      "*ItemAmount",
-      "Taxable",
-      "TaxRate",
-      "Shipping address",
-      "Ship via",
-      "Shipping date",
-      "Tracking no",
-      "Shipping Charge",
-      "Service Date",
+      "*InvoiceNo", // Invoice Number
+      "*Customer", // Customer Name
+      "*InvoiceDate", // Invoice Date
+      "*DueDate", // Due Date
+      "Terms", // Payment Terms
+      "Location", // Location
       "Memo", // Memo
       "Item(Product/Service)", // Item Name (Product/Service)
       "ItemDescription", // Item Description
+      "ItemQuantity", // Quantity
       "ItemRate", // Rate (Price per unit)
       "*ItemAmount", // Total Amount
       "Taxable", // Taxable (Y/N)
