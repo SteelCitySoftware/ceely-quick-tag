@@ -141,7 +141,9 @@ export default function OrderExportRoute() {
         <Layout.Section>
           <Card sectioned>
             <BlockStack gap="400">
-              <Heading>Export Shopify Order to QuickBooks</Heading>
+              <Text as="h2" variant="headingLg">
+                Export Shopify Order to QuickBooks
+              </Text>
               <TextField
                 label="Order Name (e.g. #1001)"
                 value={orderNameState}
