@@ -4,6 +4,15 @@ import { useState, useEffect } from "react";
 import { TextField, Button, Card, Page } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { useFetcher, useLoaderData } from "@remix-run/react";
+import {
+  downloadCSVFile,
+  getInvoiceCSVRows,
+  invoiceCSVHeaders,
+  getProductsCSVRows,
+  productsCSVHeaders,
+  sanitizeFilename,
+} from "../utils/csvExport";
+import { getOrderByQuery } from "./order-export.query";
 
 // ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -31,47 +40,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Missing order identifier" }, { status: 400 });
     }
 
-    const orderResponse = await admin.graphql(
-      `#graphql
-      query getOrderByQuery($query: String!) {
-        orders(first: 1, query: $query) {
-          edges {
-            node {
-              id
-              name
-              customer {
-                displayName
-                quickbooksName: metafield(namespace: "custom", key: "quickbooks_name") {
-                  value
-                }
-              }
-              createdAt
-              lineItems(first: 100) {
-                edges {
-                  node {
-                    title
-                    quantity
-                    originalUnitPriceSet {
-                      shopMoney { amount }
-                    }
-                    variant {
-                      sku
-                      product {
-                        productType
-                      }
-                    }
-                  }
-                }
-              }
-              customerPONumber: metafield(namespace: "custom", key: "customer_po_number") {
-                value
-              }
-            }
-          }
-        }
-      }`,
-      { variables: { query } },
-    );
+    const orderResponse = await admin.graphql(getOrderByQuery, {
+      variables: { query },
+    });
 
     const orderEdges = (await orderResponse.json()).data?.orders?.edges;
     const order = orderEdges?.[0]?.node;
@@ -120,6 +91,7 @@ export default function OrderExportRoute() {
       setOrderNameState(orderName);
       setTimeout(handleFetch, 0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialOrderId, orderName]);
 
   const handleFetch = () => {
@@ -131,114 +103,28 @@ export default function OrderExportRoute() {
     );
   };
 
-  const scrubName = (name: string) =>
-    name.replace(/[^a-zA-Z0-9 \\-]/g, "").trim();
+  useEffect(() => {
+    if (fetcher.state === "idle") setIsLoading(false);
+  }, [fetcher.state]);
 
   const downloadCSV = () => {
     if (!data?.orderExportData) return;
-    const headers = [
-      "InvoiceNo", // Invoice Number
-      "Customer", // Customer Name
-      "InvoiceDate", // Invoice Date
-      "DueDate", // Due Date
-      "Terms", // Payment Terms
-      "Location", // Location
-      "Memo", // Memo
-      "Item(Product/Service)", // Item Name (Product/Service)
-      "ItemDescription", // Item Description
-      "ItemQuantity", // Quantity
-      "ItemRate", // Rate (Price per unit)
-      "*ItemAmount", // Total Amount
-      "Taxable", // Taxable (Y/N)
-      "TaxRate", // Tax Rate
-      "Shipping address", // Shipping Address
-      "Ship via", // Shipping Method
-      "Shipping date", // Shipping Date
-      "Tracking no", // Tracking Number
-      "Shipping Charge", // Shipping Charge
-      "Service Date", // Service Date
-    ];
-    const rows = data.orderExportData.lineItems.map((item) => [
-      data.orderExportData.name, // *InvoiceNo
-      data.orderExportData.customer, // *Customer
-      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *InvoiceDate
-      new Date(data.orderExportData.createdAt).toLocaleDateString("en-US"), // *DueDate
-      "", // Terms
-      "", // Location
-      "", // Memo
-      item.title, // Item(Product/Service)
-      "", // ItemDescription
-      item.quantity, // ItemQuantity
-      item.rate.toFixed(2), // ItemRate
-      (item.quantity * item.rate).toFixed(2), // *ItemAmount
-      "N", // Taxable
-      "", // TaxRate
-      "", // Shipping address
-      "FedEx", // Ship via
-      "", // Shipping date
-      "", // Tracking no
-      "", // Shipping Charge
-      "", // Service Date
-    ]);
-    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const customerNameScrubbed = scrubName(data.orderExportData.customer);
-    const fileName = `invoice_${data.orderExportData.name}-${customerNameScrubbed}.csv`;
-    a.download = `${fileName}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const fileName = `invoice_${data.orderExportData.name}-${sanitizeFilename(data.orderExportData.customer)}.csv`;
+    downloadCSVFile(
+      invoiceCSVHeaders,
+      getInvoiceCSVRows(data.orderExportData),
+      fileName,
+    );
   };
 
   const downloadProductsCSV = () => {
     if (!data?.orderExportData) return;
-    const headers = [
-      "Product/Service Name", // 0
-      "Type", // 1
-      "SKU", // 2
-      "Sales price", // 3
-      "Purchase cost", // 4
-      "Income account", // 5
-      "Expense account", // 6
-      "Category", // 7
-      "Quantity on hand", // 8
-      "Quantity as‑of Date", // 9
-      "Sales description", // 10
-      "Purchase description", // 11
-      "Parent", // 12
-      "Option Name", // 13
-      "Option Value", // 14
-    ];
-    const today = new Date().toLocaleDateString("en-US");
-    const rows = data.orderExportData.lineItems.map((item) => [
-      item.title, // Product/Service Name
-      "Non‑inventory", // Type
-      item.sku || "", // SKU
-      item.rate.toFixed(2), // Sales price
-      "", // Purchase cost
-      "Sales Income", // Income account
-      "Cost of Goods Sold", // Expense account
-      item.category || "", // Category (from product.productType)
-      "", // Quantity on hand
-      today, // Quantity as‑of Date
-      item.title, // Sales description
-      "", // Purchase description
-      "", // Parent
-      "", // Option Name
-      "", // Option Value
-    ]);
-    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const customerNameScrubbed = scrubName(data.orderExportData.customer);
-    const fileName = `products_${data.orderExportData.name}-${customerNameScrubbed}.csv`;
-    a.download = `${fileName}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const fileName = `products_${data.orderExportData.name}-${sanitizeFilename(data.orderExportData.customer)}.csv`;
+    downloadCSVFile(
+      productsCSVHeaders,
+      getProductsCSVRows(data.orderExportData),
+      fileName,
+    );
   };
 
   return (
