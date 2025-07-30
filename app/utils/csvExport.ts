@@ -92,7 +92,7 @@ export function getProductsCSVRows(order: OrderExportData): (string | number)[][
   const today = new Date().toLocaleDateString("en-US");
   return order.lineItems.map(item => [
     item.title,
-    "Non‑inventory",
+    "Non‑Inventory",
     item.sku || "",
     item.rate.toFixed(2),
     "",
