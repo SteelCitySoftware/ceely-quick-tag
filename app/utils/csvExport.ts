@@ -109,7 +109,7 @@ export function getProductsCSVRows(order: OrderExportData): (string | number)[][
 
 export const productsCSVHeaders = [
   "Product/Service Name",
-  "Type",
+  "Item Type",
   "SKU",
   "Sales price/rate",
   "Purchase cost",
