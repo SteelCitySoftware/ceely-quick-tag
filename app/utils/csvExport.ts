@@ -47,8 +47,7 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
     "", // Location
     "", // Memo
     item.title, // Item(Product/Service)
-    item.category || "",
-    "", // ItemDescription
+    item.category, // ItemDescription
     item.quantity, // ItemQuantity
     (Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2), // ItemRate
     (item.quantity * (Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2)).toFixed(2), // ItemAmount
