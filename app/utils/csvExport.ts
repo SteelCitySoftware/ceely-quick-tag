@@ -50,9 +50,9 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
     item.category || "",
     "", // ItemDescription
     item.quantity, // ItemQuantity
-    (Math.round(item.rate * 2) / 2).toFixed(2), // ItemRate
-    (item.quantity * (Math.round(item.rate * 2) / 2).toFixed(2)).toFixed(2), // ItemAmount
-    "Y", // Taxable
+    (Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2), // ItemRate
+    (item.quantity * (Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2)).toFixed(2), // ItemAmount
+    "N", // Taxable
     "", // TaxRate
     "", // Shipping address
     "FedEx", // Ship via
@@ -72,7 +72,6 @@ export const invoiceCSVHeaders = [
   "Location",
   "Memo",
   "Item(Product/Service)",
-  "ItemCategory",
   "ItemDescription",
   "ItemQuantity",
   "ItemRate",
@@ -117,7 +116,7 @@ export const productsCSVHeaders = [
   "Purchase cost",
   "Income account",
   "Expense account",
-  "Item Category",
+  "Category",
   //"Quantity on hand",
   //"Quantity as‑of Date",
   "Sales description",
