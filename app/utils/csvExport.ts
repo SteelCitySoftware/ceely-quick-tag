@@ -46,7 +46,8 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
     "", // Terms
     "", // Location
     "", // Memo
-    item.title, // Item(Product/Service)
+    Item.title, //just product
+   (item.category || '') + ': ' + (item.title || ''), // Category + Item(Product/Service)
     item.category, // ItemDescription
     item.quantity, // ItemQuantity
     (Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2), // ItemRate
@@ -71,6 +72,7 @@ export const invoiceCSVHeaders = [
   "Terms",
   "Location",
   "Memo",
+  "ProductName",
   "Item(Product/Service)",
   "ItemDescription",
   "ItemQuantity",
