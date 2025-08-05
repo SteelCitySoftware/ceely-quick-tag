@@ -50,8 +50,8 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
     item.category || "",
     "", // ItemDescription
     item.quantity, // ItemQuantity
-    item.rate.toFixed(2), // ItemRate
-    (item.quantity * item.rate).toFixed(2), // ItemAmount
+    (Math.round(item.rate * 2) / 2).toFixed(2), // ItemRate
+    (item.quantity * (Math.round(item.rate * 2) / 2).toFixed(2)).toFixed(2), // ItemAmount
     "Y", // Taxable
     "", // TaxRate
     "", // Shipping address
@@ -94,7 +94,7 @@ export function getProductsCSVRows(order: OrderExportData): (string | number)[][
     item.title,
     "Non‑Inventory",
     item.sku || "",
-    (Math.round(item.rate * 2) / 2).toFixed(2),
+    item.rate.toFixed(2),
     "",
     "Sales",
     "Cost of Goods Sold",
