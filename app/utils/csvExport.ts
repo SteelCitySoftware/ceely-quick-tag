@@ -91,7 +91,8 @@ export function getProductsCSVRows(order: OrderExportData): (string | number)[][
   const today = new Date().toLocaleDateString("en-US");
   return order.lineItems.map(item => [
     item.title,
-    "Y", // Buy
+    "N", // Buy
+    "Y", // Sell
     "Non‑Inventory",
     item.sku || "",
     item.rate.toFixed(2),
@@ -112,6 +113,7 @@ export function getProductsCSVRows(order: OrderExportData): (string | number)[][
 export const productsCSVHeaders = [
   "Product/Service Name",
   "Buy",
+  "Sell",
   "Item Type",
   "SKU",
   "Sales price/rate",
