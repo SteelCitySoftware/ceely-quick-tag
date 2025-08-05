@@ -52,7 +52,7 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
     item.quantity, // ItemQuantity
     item.rate.toFixed(2), // ItemRate
     (item.quantity * item.rate).toFixed(2), // ItemAmount
-    "N", // Taxable
+    "Y", // Taxable
     "", // TaxRate
     "", // Shipping address
     "FedEx", // Ship via
