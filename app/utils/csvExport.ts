@@ -59,6 +59,7 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
     "", // Tracking no
     "", // Shipping Charge
     "", // Service Date
+
   ]);
 }
 
@@ -90,6 +91,7 @@ export function getProductsCSVRows(order: OrderExportData): (string | number)[][
   const today = new Date().toLocaleDateString("en-US");
   return order.lineItems.map(item => [
     item.title,
+    "Y", // Buy
     "Non‑Inventory",
     item.sku || "",
     item.rate.toFixed(2),
@@ -109,6 +111,7 @@ export function getProductsCSVRows(order: OrderExportData): (string | number)[][
 
 export const productsCSVHeaders = [
   "Product/Service Name",
+  "Buy",
   "Item Type",
   "SKU",
   "Sales price/rate",
