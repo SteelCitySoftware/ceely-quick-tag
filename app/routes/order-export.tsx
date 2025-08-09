@@ -132,7 +132,7 @@ export default function OrderExportRoute() {
         body { margin: 0; font-family: Arial, sans-serif; }
         .print-sheet {
           width: 4in; height: 6in; page-break-after: always;
-          display:flex; align-items:center; justify-content:center; padding:0.15in;
+          display:flex; align-items:left; justify-content:center; padding:0.15in;
         }
         .label-4x6 { width:100%; height:100%; border:2px solid #000; display:flex; align-items:center; justify-content:center; }
         .label-inner { width:100%; height:100%; padding:0.2in; display:grid; grid-template-rows:auto auto auto 1fr auto; gap:0.08in; }
@@ -140,9 +140,9 @@ export default function OrderExportRoute() {
         .logo img { max-width: 100%; height: auto; max-height: 1in; }
         .row { display:grid; grid-template-columns:0.9in 1fr; gap:0.08in; }
         .k { font-weight:700; font-size:14pt; }
-        .v { font-size:18pt; word-break:break-word; }
-        .count { align-self:center; justify-self:center; font-size:40pt; font-weight:800; }
-        .mixed { align-self:end; text-align:center; font-size:28pt; font-weight:900; letter-spacing:1px; }
+        .v { font-size:30; word-break:break-word; }
+        .count { align-self:center; justify-self:center; font-size:60pt; font-weight:800; }
+        .mixed { align-self:end; text-align:center; font-size:75pt; font-weight:900; letter-spacing:1px; }
       </style>
     </head>
     <body>${content}</body>
@@ -342,7 +342,7 @@ export default function OrderExportRoute() {
                       <div className="label-4x6" key={`p-${i}`}>
                         <div className="label-inner">
                           <div className="row">
-                            <div className="k">Order:</div>
+                            <div className="k"></div>
                             <div className="v">{orderLabel}</div>
                           </div>
                           {poFromOrder && (
