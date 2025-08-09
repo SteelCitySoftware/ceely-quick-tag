@@ -102,6 +102,18 @@ export default function OrderExportRoute() {
   const [inputError, setInputError] = useState<string | undefined>();
   const [showDetails, setShowDetails] = useState(false);
 
+  // 4×6 label state
+  const [cartonCount, setCartonCount] = useState<number>(1);
+
+  // Use existing data if present
+  const orderExportData = data?.orderExportData;
+  const orderLabel = orderExportData?.name ?? orderNameState ?? "";
+  const poFromOrder = orderExportData?.poNumber?.trim() || "";
+
+  const onPrintLabels = () => {
+    if (cartonCount > 0) window.print();
+  };
+
   const handleFetch = useCallback(() => {
     if (!orderNameState && !orderIdState) {
       setInputError("Please enter an Order Name or Order ID.");
@@ -259,6 +271,73 @@ export default function OrderExportRoute() {
                   )}
                 </BlockStack>
               </BlockStack>
+              <Card title="4×6 Carton Labels" sectioned>
+                <BlockStack gap="400">
+                  <TextField
+                    label="Number of cartons (X)"
+                    type="number"
+                    min={1}
+                    value={String(cartonCount)}
+                    onChange={(v) =>
+                      setCartonCount(Math.max(1, Number(v) || 1))
+                    }
+                    autoComplete="off"
+                  />
+                  <Button onClick={onPrintLabels} primary>
+                    Print {cartonCount} Label{cartonCount > 1 ? "s" : ""}
+                  </Button>
+
+                  {/* On-screen preview */}
+                  <div className="label-preview-grid">
+                    {Array.from({ length: cartonCount }, (_, i) => (
+                      <div className="label-4x6" key={`p-${i}`}>
+                        <div className="label-inner">
+                          <div className="row">
+                            <div className="k">Order:</div>
+                            <div className="v">{orderLabel}</div>
+                          </div>
+                          {poFromOrder && (
+                            <div className="row">
+                              <div className="k">PO#:</div>
+                              <div className="v">{poFromOrder}</div>
+                            </div>
+                          )}
+                          <div className="count">
+                            {i + 1} of {cartonCount}
+                          </div>
+                          <div className="mixed">MIXED CARTON</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Print-only container (revealed by @media print) */}
+                  <div id="print-container">
+                    {Array.from({ length: cartonCount }, (_, i) => (
+                      <div className="print-sheet" key={`s-${i}`}>
+                        <div className="label-4x6">
+                          <div className="label-inner">
+                            <div className="row">
+                              <div className="k">Order:</div>
+                              <div className="v">{orderLabel}</div>
+                            </div>
+                            {poFromOrder && (
+                              <div className="row">
+                                <div className="k">PO#:</div>
+                                <div className="v">{poFromOrder}</div>
+                              </div>
+                            )}
+                            <div className="count">
+                              {i + 1} of {cartonCount}
+                            </div>
+                            <div className="mixed">MIXED CARTON</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </BlockStack>
+              </Card>
             </Card>
           )}
           {data?.error && (
