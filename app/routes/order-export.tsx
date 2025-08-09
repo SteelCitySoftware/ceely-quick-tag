@@ -135,18 +135,19 @@ export default function OrderExportRoute() {
           display:flex; align-items:center; justify-content:center; padding:0.15in;
         }
         .label-4x6 { width:100%; height:100%; border:2px solid #000; display:flex; align-items:center; justify-content:center; }
-        .label-inner { width:100%; height:100%; padding:0.2in; display:grid; grid-template-rows:auto auto 1fr auto; gap:0.08in; }
+        .label-inner { width:100%; height:100%; padding:0.2in; display:grid; grid-template-rows:auto auto auto 1fr auto; gap:0.08in; }
+        .logo { text-align:center; }
+        .logo img { max-width: 100%; height: auto; max-height: 1in; }
         .row { display:grid; grid-template-columns:0.9in 1fr; gap:0.08in; }
         .k { font-weight:700; font-size:14pt; }
         .v { font-size:18pt; word-break:break-word; }
         .count { align-self:center; justify-self:center; font-size:40pt; font-weight:800; }
-        .mixed { align-self:end; text-align:center; font-size:20pt; font-weight:700; letter-spacing:1px; }
+        .mixed { align-self:end; text-align:center; font-size:28pt; font-weight:900; letter-spacing:1px; }
       </style>
     </head>
     <body>${content}</body>
   </html>`;
 
-    // IMPORTANT: no 'noopener,noreferrer' here
     const w = window.open("", "_blank", "width=900,height=700");
     if (!w) return;
 
@@ -154,7 +155,6 @@ export default function OrderExportRoute() {
     w.document.write(html);
     w.document.close();
 
-    // Give the new window a moment to render before printing
     w.focus();
     setTimeout(() => {
       try {
@@ -361,11 +361,17 @@ export default function OrderExportRoute() {
                   </div>
 
                   {/* Print-only container (revealed by @media print) */}
-                  <div ref={printRef}>
+                  <div ref={printRef} style={{ display: "none" }}>
                     {Array.from({ length: cartonCount }, (_, i) => (
-                      <div className="print-sheet" key={`s-${i}`}>
+                      <div className="print-sheet" key={i}>
                         <div className="label-4x6">
                           <div className="label-inner">
+                            <div className="logo">
+                              <img
+                                src="https://cdn.shopify.com/s/files/1/0718/6789/files/Brutus_Monroe_Logo_wih_stroke_644x247_c266ecd4-e053-4c07-92e5-6061c1ee97c8_450x.png?v=1652891855"
+                                alt="Store Logo"
+                              />
+                            </div>
                             <div className="row">
                               <div className="k">Order:</div>
                               <div className="v">{orderLabel}</div>
