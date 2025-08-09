@@ -100,7 +100,15 @@ export function sanitizeQBOText(value: string): string {
 }
 
 /** Download CSV helper */
-export function downloadCSVFile(headers: string[], rows: (string | number)[][], filename: string) {
+export function downloadCSVFile(headers: string[], rows: (string | number)[][], filename: string, p0?: {
+  data: ({ error: string; } & {}) | ({
+    orderExportData: {} & {
+      name?: any;
+      // Allows order-export.tsx to focus on UI/state and reuse CSV logic elsewhere
+      customer?: any; createdAt?: any; lineItems?: any; poNumber?: any;
+    };
+  } & {}); "": any;
+}) {
   const csv = [headers, ...rows].map(r => r.map(escapeCSV).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -121,11 +129,11 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
     return [
       order.name, // InvoiceNo
       order.customer, // Customer
-      new Date(order.createdAt).toLocaleDateString("en-US"), // InvoiceDate
-      new Date(order.createdAt).toLocaleDateString("en-US"), // DueDate
-      "", // Terms
+      new Date().toLocaleDateString("en-US"), // InvoiceDate
+      new Date().toLocaleDateString("en-US"), // DueDate
+      "Due on Receipt", // Terms
       "", // Location
-      "", // Memo
+      order.poNumber, // Memo
       sanitizedTitle, // ProductName
       `${sanitizedCategory}:${sanitizedTitle}`, // Item(Product/Service) - changed from colon to hyphen
       sanitizedSku, // ItemDescription
@@ -136,10 +144,10 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
       "", // TaxRate
       "", // Shipping address
       "FedEx", // Ship via
-      "", // Shipping date
+      new Date().toLocaleDateString("en-US"), // Shipping date
       "", // Tracking no
       "", // Shipping Charge
-      "", // Service Date
+      new Date().toLocaleDateString("en-US"), // Service Date
     ];
   });
 }
