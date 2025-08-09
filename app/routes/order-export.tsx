@@ -1,6 +1,6 @@
 import { json } from "@remix-run/node";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   BlockStack,
   Text,
@@ -24,6 +24,8 @@ import {
   sanitizeFilename,
 } from "../utils/csvExport";
 import { getOrderByQuery } from "./order-export.query";
+
+const printRef = useRef<HTMLDivElement>(null);
 
 // ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -111,7 +113,81 @@ export default function OrderExportRoute() {
   const poFromOrder = orderExportData?.poNumber?.trim() || "";
 
   const onPrintLabels = () => {
-    if (cartonCount > 0) window.print();
+    if (cartonCount <= 0 || !printRef.current) return;
+
+    const html = `
+    <html>
+      <head>
+        <title>4x6 Carton Labels</title>
+        <style>
+          @page { size: 4in 6in; margin: 0; }
+          * { box-sizing: border-box; }
+          html, body { height: 100%; }
+          body { margin: 0; font-family: Arial, sans-serif; }
+
+          /* Each printed page is exactly one 4x6 */
+          .print-sheet {
+            width: 4in;
+            height: 6in;
+            page-break-after: always;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.15in;
+          }
+
+          .label-4x6 {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .label-inner {
+            width: 100%;
+            height: 100%;
+            padding: 0.2in;
+            display: grid;
+            grid-template-rows: auto auto 1fr auto;
+            gap: 0.08in;
+          }
+          .row { display: grid; grid-template-columns: 0.9in 1fr; gap: 0.08in; }
+          .k { font-weight: 700; font-size: 14pt; }
+          .v { font-size: 18pt; word-break: break-word; }
+
+          .count {
+            align-self: center;
+            justify-self: center;
+            font-size: 40pt;
+            font-weight: 800;
+          }
+          .mixed {
+            align-self: end;
+            text-align: center;
+            font-size: 20pt;
+            font-weight: 700;
+            letter-spacing: 1px;
+          }
+        </style>
+      </head>
+      <body>
+        ${printRef.current.innerHTML}
+      </body>
+    </html>
+  `;
+
+    const w = window.open(
+      "",
+      "_blank",
+      "noopener,noreferrer,width=800,height=600",
+    );
+    if (!w) return;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    w.print();
   };
 
   const handleFetch = useCallback(() => {
@@ -312,7 +388,7 @@ export default function OrderExportRoute() {
                   </div>
 
                   {/* Print-only container (revealed by @media print) */}
-                  <div id="print-container">
+                  <div ref={printRef}>
                     {Array.from({ length: cartonCount }, (_, i) => (
                       <div className="print-sheet" key={`s-${i}`}>
                         <div className="label-4x6">
