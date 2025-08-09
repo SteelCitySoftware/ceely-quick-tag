@@ -241,7 +241,7 @@ export default function OrderExportRoute() {
                       <Text as="span">
                         {item.quantity != item.currentQuantity && (
                           <div>
-                            <s>item.quantity</s>&nbsp;
+                            <s>{item.quantity}</s>&nbsp;
                           </div>
                         )}
                         {item.currentQuantity} x {item.title} @ $
