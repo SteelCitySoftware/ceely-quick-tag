@@ -240,7 +240,9 @@ export default function OrderExportRoute() {
                     <li key={idx}>
                       <Text as="span">
                         {item.quantity != item.currentQuantity && (
-                          <s>item.quantity</s>
+                          <div>
+                            <s>item.quantity</s>&nbsp;
+                          </div>
                         )}
                         {item.currentQuantity} x {item.title} @ $
                         {item.rate.toFixed(2)}
