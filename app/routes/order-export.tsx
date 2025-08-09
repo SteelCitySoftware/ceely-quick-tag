@@ -1,5 +1,9 @@
 import { json } from "@remix-run/node";
-import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
+import type {
+  LoaderFunctionArgs,
+  LinksFunction,
+  ActionFunctionArgs,
+} from "@remix-run/node";
 import { useState, useEffect, useCallback } from "react";
 import {
   BlockStack,
@@ -24,8 +28,10 @@ import {
   sanitizeFilename,
 } from "../utils/csvExport";
 import { getOrderByQuery } from "./order-export.query";
-import "./order-export.css";
-
+import labelStyles from "./order-export.css?url";
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: labelStyles },
+];
 // ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
