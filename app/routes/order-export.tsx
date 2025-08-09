@@ -25,8 +25,6 @@ import {
 } from "../utils/csvExport";
 import { getOrderByQuery } from "./order-export.query";
 
-const printRef = useRef<HTMLDivElement>(null);
-
 // ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -103,6 +101,7 @@ export default function OrderExportRoute() {
   const [isLoading, setIsLoading] = useState(false);
   const [inputError, setInputError] = useState<string | undefined>();
   const [showDetails, setShowDetails] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   // 4×6 label state
   const [cartonCount, setCartonCount] = useState<number>(1);
