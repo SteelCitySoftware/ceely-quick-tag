@@ -1,7 +1,6 @@
 // GraphQL query for fetching a Shopify order by query string (order id or name)
 export const getOrderByQuery = `#graphql
   query getOrderByQuery($query: String!) {
-    query getOrderByQuery($query: String!) {
       orders(first: 1, query: $query) {
         edges {
           node {
@@ -51,5 +50,4 @@ export const getOrderByQuery = `#graphql
         }
       }
     }
-}
 `;
