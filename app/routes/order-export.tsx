@@ -111,84 +111,55 @@ export default function OrderExportRoute() {
   const orderLabel = orderExportData?.name ?? orderNameState ?? "";
   const poFromOrder = orderExportData?.poNumber?.trim() || "";
 
-  const onPrintLabels = () => {
-    if (cartonCount <= 0 || !printRef.current) return;
+  const onPrintLabels = () => {const onPrintLabels = () => {
+  if (cartonCount <= 0 || !printRef.current) return;
 
-    const html = `
-    <html>
-      <head>
-        <title>4x6 Carton Labels</title>
-        <style>
-          @page { size: 4in 6in; margin: 0; }
-          * { box-sizing: border-box; }
-          html, body { height: 100%; }
-          body { margin: 0; font-family: Arial, sans-serif; }
+  const content = printRef.current.innerHTML?.trim();
+  if (!content) {
+    console.warn("No label HTML to print");
+    return;
+  }
 
-          /* Each printed page is exactly one 4x6 */
-          .print-sheet {
-            width: 4in;
-            height: 6in;
-            page-break-after: always;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.15in;
-          }
+  const html = `
+  <html>
+    <head>
+      <title>4x6 Carton Labels</title>
+      <meta charset="utf-8" />
+      <style>
+        @page { size: 4in 6in; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body { margin: 0; font-family: Arial, sans-serif; }
+        .print-sheet {
+          width: 4in; height: 6in; page-break-after: always;
+          display:flex; align-items:center; justify-content:center; padding:0.15in;
+        }
+        .label-4x6 { width:100%; height:100%; border:2px solid #000; display:flex; align-items:center; justify-content:center; }
+        .label-inner { width:100%; height:100%; padding:0.2in; display:grid; grid-template-rows:auto auto 1fr auto; gap:0.08in; }
+        .row { display:grid; grid-template-columns:0.9in 1fr; gap:0.08in; }
+        .k { font-weight:700; font-size:14pt; }
+        .v { font-size:18pt; word-break:break-word; }
+        .count { align-self:center; justify-self:center; font-size:40pt; font-weight:800; }
+        .mixed { align-self:end; text-align:center; font-size:20pt; font-weight:700; letter-spacing:1px; }
+      </style>
+    </head>
+    <body>${content}</body>
+  </html>`;
 
-          .label-4x6 {
-            width: 100%;
-            height: 100%;
-            border: 2px solid #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          .label-inner {
-            width: 100%;
-            height: 100%;
-            padding: 0.2in;
-            display: grid;
-            grid-template-rows: auto auto 1fr auto;
-            gap: 0.08in;
-          }
-          .row { display: grid; grid-template-columns: 0.9in 1fr; gap: 0.08in; }
-          .k { font-weight: 700; font-size: 14pt; }
-          .v { font-size: 18pt; word-break: break-word; }
+  // IMPORTANT: no 'noopener,noreferrer' here
+  const w = window.open("", "_blank", "width=900,height=700");
+  if (!w) return;
 
-          .count {
-            align-self: center;
-            justify-self: center;
-            font-size: 40pt;
-            font-weight: 800;
-          }
-          .mixed {
-            align-self: end;
-            text-align: center;
-            font-size: 20pt;
-            font-weight: 700;
-            letter-spacing: 1px;
-          }
-        </style>
-      </head>
-      <body>
-        ${printRef.current.innerHTML}
-      </body>
-    </html>
-  `;
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 
-    const w = window.open(
-      "",
-      "_blank",
-      "noopener,noreferrer,width=800,height=600",
-    );
-    if (!w) return;
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    w.print();
-  };
-
+  // Give the new window a moment to render before printing
+  w.focus();
+  setTimeout(() => {
+    try { w.print(); } catch {}
+  }, 200);
+};
   const handleFetch = useCallback(() => {
     if (!orderNameState && !orderIdState) {
       setInputError("Please enter an Order Name or Order ID.");
