@@ -238,16 +238,13 @@ export default function OrderExportRoute() {
                 <BlockStack as="ul" gap="100">
                   {data.orderExportData.lineItems.map((item, idx) => (
                     <li key={idx}>
-                      {item.currentQuantity == 0 && <s>}
-                        <Text as="span">
-                          
-                            {item.quantity != item.currentQuantity &&
-                              <s>item.quantity</s>}
-                          
-                          {item.currentQuantity} x {item.title} @ $
-                          {item.rate.toFixed(2)}
-                        </Text>
-                      {item.currentQuantity == 0 && </s>}
+                      <Text as="span">
+                        {item.quantity != item.currentQuantity && (
+                          <s>item.quantity</s>
+                        )}
+                        {item.currentQuantity} x {item.title} @ $
+                        {item.rate.toFixed(2)}
+                      </Text>
                     </li>
                   ))}
                   {data.orderExportData.lineItems.length === 0 && (
