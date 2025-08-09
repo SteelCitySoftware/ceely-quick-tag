@@ -245,7 +245,11 @@ export default function OrderExportRoute() {
                           </em>
                         )}
                         {item.currentQuantity} x {item.title} @ $
-                        {item.rate.toFixed(2)}
+                        {(Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2)} = $
+                        {(
+                          item.currentQuantity *
+                          (Math.round(item.rate / 2 / 0.5) * 0.5)
+                        ).toFixed(2)}
                       </Text>
                     </li>
                   ))}
