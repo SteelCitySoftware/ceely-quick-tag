@@ -160,170 +160,145 @@ export default function OrderExportRoute() {
 
   return (
     <Page title="Order Export">
-      <Layout>
-        <Layout.Section>
-          <Card sectioned>
-            <BlockStack gap="400">
-              <Text as="h2" variant="headingLg">
-                Export Shopify Order to QuickBooks
-              </Text>
-              <Text as="p">
-                Enter an Order Name (like <code>#1001</code>) or an Order ID to
-                fetch the order and export details in QuickBooks-friendly CSV
-                format.
-              </Text>
-              <TextField
-                label="Order Name (e.g. #1001)"
-                value={orderNameState}
-                onChange={setOrderNameState}
-                autoComplete="off"
-                disabled={isLoading}
-              />
-              <TextField
-                label="Order ID"
-                value={orderIdState}
-                onChange={setOrderIdState}
-                autoComplete="off"
-                disabled={isLoading}
-              />
-              {inputError && (
-                <InlineError message={inputError} fieldID="orderName" />
-              )}
-              <Button onClick={handleFetch} loading={isLoading} primary>
-                Fetch Order
-              </Button>
-              {isLoading && (
-                <Spinner
-                  accessibilityLabel="Loading order details"
-                  size="small"
-                />
-              )}
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-
-        <Layout.Section>
-          {showDetails && data?.orderExportData && (
-            <Card
-              sectioned
-              title={`Export for Order: ${data.orderExportData.name}`}
-            >
+      <div className="no-print">
+        <Layout>
+          <Layout.Section>
+            <Card sectioned>
               <BlockStack gap="400">
-                <Banner
-                  status="success"
-                  title="Order loaded and ready for export."
-                />
-                <Text as="h3" variant="headingMd">
-                  Customer:{" "}
-                  <Text as="span" fontWeight="bold">
-                    {data.orderExportData.customer}
-                  </Text>
+                <Text as="h2" variant="headingLg">
+                  Export Shopify Order to QuickBooks
                 </Text>
                 <Text as="p">
-                  Created At:{" "}
-                  {new Date(data.orderExportData.createdAt).toLocaleString()}
+                  Enter an Order Name (like <code>#1001</code>) or an Order ID
+                  to fetch the order and export details in QuickBooks-friendly
+                  CSV format.
                 </Text>
-                {data.orderExportData.poNumber && (
-                  <Text as="p">
-                    <strong>PO Number:</strong> {data.orderExportData.poNumber}
-                  </Text>
+                <TextField
+                  label="Order Name (e.g. #1001)"
+                  value={orderNameState}
+                  onChange={setOrderNameState}
+                  autoComplete="off"
+                  disabled={isLoading}
+                />
+                <TextField
+                  label="Order ID"
+                  value={orderIdState}
+                  onChange={setOrderIdState}
+                  autoComplete="off"
+                  disabled={isLoading}
+                />
+                {inputError && (
+                  <InlineError message={inputError} fieldID="orderName" />
                 )}
-                <Button
-                  onClick={() =>
-                    downloadCSVFile(
-                      invoiceCSVHeaders,
-                      getInvoiceCSVRows(data.orderExportData),
-                      `${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber?.trim() ? `-${sanitizeFilename(data.orderExportData.poNumber?.trim())}` : ""}-invoice.csv`,
-                    )
-                  }
-                  size="medium"
-                >
-                  Download Invoice CSV
+                <Button onClick={handleFetch} loading={isLoading} primary>
+                  Fetch Order
                 </Button>
-                <Button
-                  onClick={() =>
-                    downloadCSVFile(
-                      productsCSVHeaders,
-                      getProductsCSVRows(data.orderExportData),
-                      `${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber?.trim() ? `-${sanitizeFilename(data.orderExportData.poNumber?.trim())}` : ""}-products.csv`,
-                    )
-                  }
-                  size="medium"
-                >
-                  Download Products CSV
-                </Button>
-                <Text as="h3" variant="headingMd">
-                  Line Items
-                </Text>
-                <BlockStack as="ul" gap="100">
-                  {data.orderExportData.lineItems.map((item, idx) => (
-                    <li key={idx}>
-                      <Text as="span">
-                        {item.quantity != item.currentQuantity && (
-                          <em>
-                            <s>{item.quantity}</s>&nbsp;
-                          </em>
-                        )}
-                        {item.currentQuantity} x {item.title} @
-                        <s>${item.rate.toFixed(2)}</s>&nbsp;$
-                        {(Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2)} = $
-                        {(
-                          item.currentQuantity *
-                          (Math.round(item.rate / 2 / 0.5) * 0.5)
-                        ).toFixed(2)}
-                      </Text>
-                    </li>
-                  ))}
-                  {data.orderExportData.lineItems.length === 0 && (
-                    <Text as="p">No line items found for this order.</Text>
-                  )}
-                </BlockStack>
-              </BlockStack>
-              <Card title="4×6 Carton Labels" sectioned>
-                <BlockStack gap="400">
-                  <TextField
-                    label="Number of cartons (X)"
-                    type="number"
-                    min={1}
-                    value={String(cartonCount)}
-                    onChange={(v) =>
-                      setCartonCount(Math.max(1, Number(v) || 1))
-                    }
-                    autoComplete="off"
+                {isLoading && (
+                  <Spinner
+                    accessibilityLabel="Loading order details"
+                    size="small"
                   />
-                  <Button onClick={onPrintLabels} primary>
-                    Print {cartonCount} Label{cartonCount > 1 ? "s" : ""}
+                )}
+              </BlockStack>
+            </Card>
+            {showDetails && data?.orderExportData && (
+              <Card
+                sectioned
+                title={`Export for Order: ${data.orderExportData.name}`}
+              >
+                <BlockStack gap="400">
+                  <Banner
+                    status="success"
+                    title="Order loaded and ready for export."
+                  />
+                  <Text as="h3" variant="headingMd">
+                    Customer:{" "}
+                    <Text as="span" fontWeight="bold">
+                      {data.orderExportData.customer}
+                    </Text>
+                  </Text>
+                  <Text as="p">
+                    Created At:{" "}
+                    {new Date(data.orderExportData.createdAt).toLocaleString()}
+                  </Text>
+                  {data.orderExportData.poNumber && (
+                    <Text as="p">
+                      <strong>PO Number:</strong>{" "}
+                      {data.orderExportData.poNumber}
+                    </Text>
+                  )}
+                  <Button
+                    onClick={() =>
+                      downloadCSVFile(
+                        invoiceCSVHeaders,
+                        getInvoiceCSVRows(data.orderExportData),
+                        `${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber?.trim() ? `-${sanitizeFilename(data.orderExportData.poNumber?.trim())}` : ""}-invoice.csv`,
+                      )
+                    }
+                    size="medium"
+                  >
+                    Download Invoice CSV
                   </Button>
-
-                  {/* On-screen preview */}
-                  <div className="label-preview-grid">
-                    {Array.from({ length: cartonCount }, (_, i) => (
-                      <div className="label-4x6" key={`p-${i}`}>
-                        <div className="label-inner">
-                          <div className="row">
-                            <div className="k">Order:</div>
-                            <div className="v">{orderLabel}</div>
-                          </div>
-                          {poFromOrder && (
-                            <div className="row">
-                              <div className="k">PO#:</div>
-                              <div className="v">{poFromOrder}</div>
-                            </div>
+                  <Button
+                    onClick={() =>
+                      downloadCSVFile(
+                        productsCSVHeaders,
+                        getProductsCSVRows(data.orderExportData),
+                        `${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber?.trim() ? `-${sanitizeFilename(data.orderExportData.poNumber?.trim())}` : ""}-products.csv`,
+                      )
+                    }
+                    size="medium"
+                  >
+                    Download Products CSV
+                  </Button>
+                  <Text as="h3" variant="headingMd">
+                    Line Items
+                  </Text>
+                  <BlockStack as="ul" gap="100">
+                    {data.orderExportData.lineItems.map((item, idx) => (
+                      <li key={idx}>
+                        <Text as="span">
+                          {item.quantity != item.currentQuantity && (
+                            <em>
+                              <s>{item.quantity}</s>&nbsp;
+                            </em>
                           )}
-                          <div className="count">
-                            {i + 1} of {cartonCount}
-                          </div>
-                          <div className="mixed">MIXED CARTON</div>
-                        </div>
-                      </div>
+                          {item.currentQuantity} x {item.title} @
+                          <s>${item.rate.toFixed(2)}</s>&nbsp;$
+                          {(Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2)} =
+                          $
+                          {(
+                            item.currentQuantity *
+                            (Math.round(item.rate / 2 / 0.5) * 0.5)
+                          ).toFixed(2)}
+                        </Text>
+                      </li>
                     ))}
-                  </div>
+                    {data.orderExportData.lineItems.length === 0 && (
+                      <Text as="p">No line items found for this order.</Text>
+                    )}
+                  </BlockStack>
+                </BlockStack>
+                <Card title="4×6 Carton Labels" sectioned>
+                  <BlockStack gap="400">
+                    <TextField
+                      label="Number of cartons (X)"
+                      type="number"
+                      min={1}
+                      value={String(cartonCount)}
+                      onChange={(v) =>
+                        setCartonCount(Math.max(1, Number(v) || 1))
+                      }
+                      autoComplete="off"
+                    />
+                    <Button onClick={onPrintLabels} primary>
+                      Print {cartonCount} Label{cartonCount > 1 ? "s" : ""}
+                    </Button>
 
-                  {/* Print-only container (revealed by @media print) */}
-                  <div id="print-container">
-                    {Array.from({ length: cartonCount }, (_, i) => (
-                      <div className="print-sheet" key={`s-${i}`}>
-                        <div className="label-4x6">
+                    {/* On-screen preview */}
+                    <div className="label-preview-grid">
+                      {Array.from({ length: cartonCount }, (_, i) => (
+                        <div className="label-4x6" key={`p-${i}`}>
                           <div className="label-inner">
                             <div className="row">
                               <div className="k">Order:</div>
@@ -341,22 +316,48 @@ export default function OrderExportRoute() {
                             <div className="mixed">MIXED CARTON</div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </BlockStack>
+                      ))}
+                    </div>
+
+                    {/* Print-only container (revealed by @media print) */}
+                    <div id="print-container">
+                      {Array.from({ length: cartonCount }, (_, i) => (
+                        <div className="print-sheet" key={`s-${i}`}>
+                          <div className="label-4x6">
+                            <div className="label-inner">
+                              <div className="row">
+                                <div className="k">Order:</div>
+                                <div className="v">{orderLabel}</div>
+                              </div>
+                              {poFromOrder && (
+                                <div className="row">
+                                  <div className="k">PO#:</div>
+                                  <div className="v">{poFromOrder}</div>
+                                </div>
+                              )}
+                              <div className="count">
+                                {i + 1} of {cartonCount}
+                              </div>
+                              <div className="mixed">MIXED CARTON</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </BlockStack>
+                </Card>
               </Card>
-            </Card>
-          )}
-          {data?.error && (
-            <Card sectioned>
-              <Banner status="critical" title="Error">
-                {data.error}
-              </Banner>
-            </Card>
-          )}
-        </Layout.Section>
-      </Layout>
+            )}
+            {data?.error && (
+              <Card sectioned>
+                <Banner status="critical" title="Error">
+                  {data.error}
+                </Banner>
+              </Card>
+            )}
+          </Layout.Section>
+        </Layout>
+      </div>
     </Page>
   );
 }
