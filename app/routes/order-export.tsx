@@ -24,8 +24,8 @@ import {
   sanitizeFilename,
 } from "../utils/csvExport";
 import { getOrderByQuery } from "./order-export.query";
+import "./order-export.css";
 
-// ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const orderName = url.searchParams.get("order_number");
@@ -33,7 +33,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({ orderName, orderId });
 };
 
-// ----- Server: action -----
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
@@ -62,7 +61,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Extra null checks for safety
     return json({
       orderExportData: {
         name: order.name,
@@ -91,7 +89,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return json({ error: "Invalid submission" }, { status: 400 });
 };
 
-// ----- Client: Component -----
 export default function OrderExportRoute() {
   const fetcher = useFetcher<typeof action>();
   const data = fetcher.data;
@@ -101,8 +98,6 @@ export default function OrderExportRoute() {
   const [isLoading, setIsLoading] = useState(false);
   const [inputError, setInputError] = useState<string | undefined>();
   const [showDetails, setShowDetails] = useState(false);
-
-  // 4x6 Label state
   const [cartonCount, setCartonCount] = useState<number>(1);
 
   const handleFetch = useCallback(() => {
@@ -131,7 +126,6 @@ export default function OrderExportRoute() {
       setOrderNameState(orderName);
       setTimeout(handleFetch, 0);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialOrderId, orderName]);
 
   useEffect(() => {
@@ -146,91 +140,11 @@ export default function OrderExportRoute() {
   const poFromOrder = orderExportData?.poNumber?.trim() || "";
 
   const onPrintLabels = () => {
-    // ensure at least one label is present before printing
     if (cartonCount > 0) window.print();
   };
 
   return (
     <Page title="Order Export">
-      {/* Styles for preview + print */}
-      <style>{`
-        /* On-screen preview grid */
-        .label-preview-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-          gap: 16px;
-        }
-        .label-4x6 {
-          box-sizing: border-box;
-          width: 4in;
-          height: 6in;
-          max-width: 100%;
-          background: #fff;
-          border: 1px solid #ddd;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0.35in;
-        }
-        .label-inner {
-          width: 100%;
-          height: 100%;
-          display: grid;
-          grid-auto-rows: min-content;
-          align-content: start;
-          gap: 0.25in;
-          font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-        }
-        .row {
-          display: grid;
-          grid-template-columns: 1.1in 1fr;
-          gap: 0.15in;
-          font-size: 18pt;
-          line-height: 1.15;
-        }
-        .row .k { font-weight: 700; }
-        .row .v { word-break: break-word; }
-        .count {
-          font-size: 42pt;
-          font-weight: 800;
-          text-align: left;
-          margin-top: 0.1in;
-        }
-        .mixed {
-          margin-top: auto;
-          font-size: 36pt;
-          font-weight: 900;
-          text-align: center;
-          letter-spacing: 0.03em;
-        }
-
-        /* Print: exact 4x6, show only .print-sheet with one label per page */
-        @media print {
-          @page { size: 4in 6in; margin: 0; }
-          body { margin: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-          /* Hide everything by default */
-          body * { visibility: hidden; height: 0; overflow: hidden; }
-
-          /* Show only the print container + its contents */
-          #print-container, #print-container * { visibility: visible; height: auto; overflow: visible; }
-
-          /* Each sheet is a page */
-          .print-sheet {
-            display: block !important;
-            width: 4in !important;
-            height: 6in !important;
-            page-break-after: always;
-            padding: 0.35in;
-            box-sizing: border-box;
-            background: #fff;
-          }
-
-          /* Remove borders for print labels */
-          .label-4x6 { border: none !important; width: 100% !important; height: 100% !important; padding: 0; }
-        }
-      `}</style>
-
       <Layout>
         <Layout.Section>
           <Card sectioned>
@@ -308,7 +222,6 @@ export default function OrderExportRoute() {
                         `${sanitizeFilename(orderExportData.customer)}-${sanitizeFilename(orderExportData.name)}${orderExportData.poNumber?.trim() ? `-${sanitizeFilename(orderExportData.poNumber?.trim())}` : ""}-invoice.csv`,
                       )
                     }
-                    size="medium"
                   >
                     Download Invoice CSV
                   </Button>
@@ -320,7 +233,6 @@ export default function OrderExportRoute() {
                         `${sanitizeFilename(orderExportData.customer)}-${sanitizeFilename(orderExportData.name)}${orderExportData.poNumber?.trim() ? `-${sanitizeFilename(orderExportData.poNumber?.trim())}` : ""}-products.csv`,
                       )
                     }
-                    size="medium"
                   >
                     Download Products CSV
                   </Button>
@@ -355,7 +267,6 @@ export default function OrderExportRoute() {
                 </BlockStack>
               </Card>
 
-              {/* 4×6 labels UI */}
               <Card title="4×6 Carton Labels" sectioned>
                 <BlockStack gap="400">
                   <TextField
@@ -372,60 +283,54 @@ export default function OrderExportRoute() {
                     Print {cartonCount} Label{cartonCount > 1 ? "s" : ""}
                   </Button>
 
-                  {/* On-screen preview of all labels */}
+                  {/* Preview grid */}
                   <div className="label-preview-grid">
-                    {Array.from({ length: cartonCount }, (_, i) => {
-                      const n = i + 1;
-                      return (
-                        <div className="label-4x6" key={`p-${n}`}>
+                    {Array.from({ length: cartonCount }, (_, i) => (
+                      <div className="label-4x6" key={`p-${i}`}>
+                        <div className="label-inner">
+                          <div className="row">
+                            <div className="k">Order:</div>
+                            <div className="v">{orderLabel}</div>
+                          </div>
+                          {poFromOrder && (
+                            <div className="row">
+                              <div className="k">PO#:</div>
+                              <div className="v">{poFromOrder}</div>
+                            </div>
+                          )}
+                          <div className="count">
+                            {i + 1} of {cartonCount}
+                          </div>
+                          <div className="mixed">MIXED CARTON</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Print-only container */}
+                  <div id="print-container">
+                    {Array.from({ length: cartonCount }, (_, i) => (
+                      <div className="print-sheet" key={`s-${i}`}>
+                        <div className="label-4x6">
                           <div className="label-inner">
                             <div className="row">
                               <div className="k">Order:</div>
                               <div className="v">{orderLabel}</div>
                             </div>
-                            {poFromOrder ? (
+                            {poFromOrder && (
                               <div className="row">
                                 <div className="k">PO#:</div>
                                 <div className="v">{poFromOrder}</div>
                               </div>
-                            ) : null}
+                            )}
                             <div className="count">
-                              {n} of {cartonCount}
+                              {i + 1} of {cartonCount}
                             </div>
                             <div className="mixed">MIXED CARTON</div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Print-only container: one page per label */}
-                  <div id="print-container" aria-hidden="true">
-                    {Array.from({ length: cartonCount }, (_, i) => {
-                      const n = i + 1;
-                      return (
-                        <div className="print-sheet" key={`s-${n}`}>
-                          <div className="label-4x6">
-                            <div className="label-inner">
-                              <div className="row">
-                                <div className="k">Order:</div>
-                                <div className="v">{orderLabel}</div>
-                              </div>
-                              {poFromOrder ? (
-                                <div className="row">
-                                  <div className="k">PO#:</div>
-                                  <div className="v">{poFromOrder}</div>
-                                </div>
-                              ) : null}
-                              <div className="count">
-                                {n} of {cartonCount}
-                              </div>
-                              <div className="mixed">MIXED CARTON</div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 </BlockStack>
               </Card>
