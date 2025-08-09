@@ -111,16 +111,16 @@ export default function OrderExportRoute() {
   const orderLabel = orderExportData?.name ?? orderNameState ?? "";
   const poFromOrder = orderExportData?.poNumber?.trim() || "";
 
-  const onPrintLabels = () => {const onPrintLabels = () => {
-  if (cartonCount <= 0 || !printRef.current) return;
+  const onPrintLabels = () => {
+    if (cartonCount <= 0 || !printRef.current) return;
 
-  const content = printRef.current.innerHTML?.trim();
-  if (!content) {
-    console.warn("No label HTML to print");
-    return;
-  }
+    const content = printRef.current.innerHTML?.trim();
+    if (!content) {
+      console.warn("No label HTML to print");
+      return;
+    }
 
-  const html = `
+    const html = `
   <html>
     <head>
       <title>4x6 Carton Labels</title>
@@ -146,20 +146,23 @@ export default function OrderExportRoute() {
     <body>${content}</body>
   </html>`;
 
-  // IMPORTANT: no 'noopener,noreferrer' here
-  const w = window.open("", "_blank", "width=900,height=700");
-  if (!w) return;
+    // IMPORTANT: no 'noopener,noreferrer' here
+    const w = window.open("", "_blank", "width=900,height=700");
+    if (!w) return;
 
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
 
-  // Give the new window a moment to render before printing
-  w.focus();
-  setTimeout(() => {
-    try { w.print(); } catch {}
-  }, 200);
-};
+    // Give the new window a moment to render before printing
+    w.focus();
+    setTimeout(() => {
+      try {
+        w.print();
+      } catch {}
+    }, 200);
+  };
+
   const handleFetch = useCallback(() => {
     if (!orderNameState && !orderIdState) {
       setInputError("Please enter an Order Name or Order ID.");
