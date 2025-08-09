@@ -212,7 +212,7 @@ export default function OrderExportRoute() {
                     downloadCSVFile(
                       invoiceCSVHeaders,
                       getInvoiceCSVRows(data.orderExportData),
-                      `${data.orderExportData.customer}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber && "-" + data.orderExportData.poNumber}-invoice.csv`,
+                      `${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber?.trim() ? `-${sanitizeFilename(data.orderExportData.poNumber?.trim())}` : ""}-invoice.csv`,
                     )
                   }
                   size="medium"
