@@ -141,8 +141,8 @@ export default function OrderExportRoute() {
         .row { display:grid; grid-template-columns:0.9in 1fr; gap:0.08in; }
         .k { font-weight:700; font-size:20pt; }
         .v { font-size:25pt; word-break:break-word; }
-        .count { align-self:center; justify-self:center; font-size:30pt; font-weight:800; }
-        .mixed { align-self:end; text-align:center; font-size:40pt; font-weight:900; letter-spacing:1px; }
+        .count { align-self:center; justify-self:center; font-size:60pt; font-weight:800; }
+        .mixed { align-self:end; text-align:center; font-size:50pt; font-weight:900; letter-spacing:1px; }
       </style>
     </head>
     <body>${content}</body>
