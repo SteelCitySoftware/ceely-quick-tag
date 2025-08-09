@@ -127,7 +127,7 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
       "", // Location
       "", // Memo
       sanitizedTitle, // ProductName
-      `${sanitizedCategory} - ${sanitizedTitle}`, // Item(Product/Service) - changed from colon to hyphen
+      `${sanitizedCategory}:${sanitizedTitle}`, // Item(Product/Service) - changed from colon to hyphen
       sanitizedSku, // ItemDescription
       item.quantity, // ItemQuantity
       (Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2), // ItemRate
