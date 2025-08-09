@@ -226,7 +226,8 @@ export default function OrderExportRoute() {
                   </Text>
                   {data.orderExportData.poNumber && (
                     <Text as="p">
-                      <strong>PO Number:</strong> {data.orderExportData.poNumber}
+                      <strong>PO Number:</strong>{" "}
+                      {data.orderExportData.poNumber}
                     </Text>
                   )}
                   <Button
@@ -268,7 +269,8 @@ export default function OrderExportRoute() {
                           )}
                           {item.currentQuantity} x {item.title} @
                           <s>${item.rate.toFixed(2)}</s>&nbsp;$
-                          {(Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2)} = $
+                          {(Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2)} =
+                          $
                           {(
                             item.currentQuantity *
                             (Math.round(item.rate / 2 / 0.5) * 0.5)
@@ -291,7 +293,7 @@ export default function OrderExportRoute() {
                   </Text>
 
                   <TextField
-                    label="Total cartons (X for \"1 of X\")"
+                    label="Total cartons"
                     type="number"
                     min={1}
                     value={totalCartons}
@@ -313,29 +315,59 @@ export default function OrderExportRoute() {
                       fontFamily: "monospace",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <Text as="span" variant="headingMd">ORDER</Text>
-                      <Text as="span" variant="headingMd">{data.orderExportData.name}</Text>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Text as="span" variant="headingMd">
+                        ORDER
+                      </Text>
+                      <Text as="span" variant="headingMd">
+                        {data.orderExportData.name}
+                      </Text>
                     </div>
 
                     {data.orderExportData.poNumber && (
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <Text as="span" variant="bodyMd">PO#</Text>
-                        <Text as="span" variant="bodyMd">{data.orderExportData.poNumber}</Text>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Text as="span" variant="bodyMd">
+                          PO#
+                        </Text>
+                        <Text as="span" variant="bodyMd">
+                          {data.orderExportData.poNumber}
+                        </Text>
                       </div>
                     )}
 
-                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
-                      <Text as="span" variant="headingMd">CARTON</Text>
-                      <Text as="span" variant="headingMd">1 of {cartonsInt}</Text>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginTop: "8px",
+                      }}
+                    >
+                      <Text as="span" variant="headingMd">
+                        CARTON
+                      </Text>
+                      <Text as="span" variant="headingMd">
+                        1 of {cartonsInt}
+                      </Text>
                     </div>
 
-                    <div style={{
-                      marginTop: "auto",
-                      textAlign: "center",
-                      borderTop: "1px dashed #999",
-                      paddingTop: "12px",
-                    }}>
+                    <div
+                      style={{
+                        marginTop: "auto",
+                        textAlign: "center",
+                        borderTop: "1px dashed #999",
+                        paddingTop: "12px",
+                      }}
+                    >
                       <Text as="p" variant="headingLg" fontWeight="bold">
                         MIXED CARTON
                       </Text>
@@ -359,27 +391,64 @@ export default function OrderExportRoute() {
                       gap: "0.1in",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div style={{ fontSize: "16pt", fontWeight: 700 }}>ORDER</div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div style={{ fontSize: "16pt", fontWeight: 700 }}>
+                        ORDER
+                      </div>
                       <div style={{ fontSize: "18pt", fontWeight: 700 }}>
                         {data.orderExportData.name}
                       </div>
                     </div>
 
                     {data.orderExportData.poNumber && (
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
                         <div style={{ fontSize: "12pt" }}>PO#</div>
-                        <div style={{ fontSize: "12pt" }}>{data.orderExportData.poNumber}</div>
+                        <div style={{ fontSize: "12pt" }}>
+                          {data.orderExportData.poNumber}
+                        </div>
                       </div>
                     )}
 
-                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.1in" }}>
-                      <div style={{ fontSize: "16pt", fontWeight: 700 }}>CARTON</div>
-                      <div style={{ fontSize: "18pt", fontWeight: 700 }}>1 of {cartonsInt}</div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginTop: "0.1in",
+                      }}
+                    >
+                      <div style={{ fontSize: "16pt", fontWeight: 700 }}>
+                        CARTON
+                      </div>
+                      <div style={{ fontSize: "18pt", fontWeight: 700 }}>
+                        1 of {cartonsInt}
+                      </div>
                     </div>
 
-                    <div style={{ marginTop: "auto", textAlign: "center", borderTop: "1px dashed #000", paddingTop: "0.15in" }}>
-                      <div style={{ fontSize: "26pt", fontWeight: 800, letterSpacing: "1px" }}>
+                    <div
+                      style={{
+                        marginTop: "auto",
+                        textAlign: "center",
+                        borderTop: "1px dashed #000",
+                        paddingTop: "0.15in",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "26pt",
+                          fontWeight: 800,
+                          letterSpacing: "1px",
+                        }}
+                      >
                         MIXED CARTON
                       </div>
                     </div>
