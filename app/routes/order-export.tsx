@@ -24,8 +24,8 @@ import {
   sanitizeFilename,
 } from "../utils/csvExport";
 import { getOrderByQuery } from "./order-export.query";
-import "./order-export.css";
 
+// ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const orderName = url.searchParams.get("order_number");
@@ -33,6 +33,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({ orderName, orderId });
 };
 
+// ----- Server: action -----
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
@@ -61,6 +62,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Order not found" }, { status: 404 });
     }
 
+    // Extra null checks for safety
     return json({
       orderExportData: {
         name: order.name,
@@ -89,6 +91,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return json({ error: "Invalid submission" }, { status: 400 });
 };
 
+// ----- Client: Component -----
 export default function OrderExportRoute() {
   const fetcher = useFetcher<typeof action>();
   const data = fetcher.data;
@@ -98,7 +101,6 @@ export default function OrderExportRoute() {
   const [isLoading, setIsLoading] = useState(false);
   const [inputError, setInputError] = useState<string | undefined>();
   const [showDetails, setShowDetails] = useState(false);
-  const [cartonCount, setCartonCount] = useState<number>(1);
 
   const handleFetch = useCallback(() => {
     if (!orderNameState && !orderIdState) {
@@ -126,6 +128,7 @@ export default function OrderExportRoute() {
       setOrderNameState(orderName);
       setTimeout(handleFetch, 0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialOrderId, orderName]);
 
   useEffect(() => {
@@ -134,14 +137,6 @@ export default function OrderExportRoute() {
       if (fetcher.data?.orderExportData) setShowDetails(true);
     }
   }, [fetcher.state, fetcher.data]);
-
-  const orderExportData = data?.orderExportData;
-  const orderLabel = orderExportData?.name ?? orderNameState ?? "";
-  const poFromOrder = orderExportData?.poNumber?.trim() || "";
-
-  const onPrintLabels = () => {
-    if (cartonCount > 0) window.print();
-  };
 
   return (
     <Page title="Order Export">
@@ -188,153 +183,83 @@ export default function OrderExportRoute() {
         </Layout.Section>
 
         <Layout.Section>
-          {showDetails && orderExportData && (
-            <>
-              <Card
-                sectioned
-                title={`Export for Order: ${orderExportData.name}`}
-              >
-                <BlockStack gap="400">
-                  <Banner
-                    status="success"
-                    title="Order loaded and ready for export."
-                  />
-                  <Text as="h3" variant="headingMd">
-                    Customer:{" "}
-                    <Text as="span" fontWeight="bold">
-                      {orderExportData.customer}
-                    </Text>
+          {showDetails && data?.orderExportData && (
+            <Card
+              sectioned
+              title={`Export for Order: ${data.orderExportData.name}`}
+            >
+              <BlockStack gap="400">
+                <Banner
+                  status="success"
+                  title="Order loaded and ready for export."
+                />
+                <Text as="h3" variant="headingMd">
+                  Customer:{" "}
+                  <Text as="span" fontWeight="bold">
+                    {data.orderExportData.customer}
                   </Text>
+                </Text>
+                <Text as="p">
+                  Created At:{" "}
+                  {new Date(data.orderExportData.createdAt).toLocaleString()}
+                </Text>
+                {data.orderExportData.poNumber && (
                   <Text as="p">
-                    Created At:{" "}
-                    {new Date(orderExportData.createdAt).toLocaleString()}
+                    <strong>PO Number:</strong> {data.orderExportData.poNumber}
                   </Text>
-                  {orderExportData.poNumber && (
-                    <Text as="p">
-                      <strong>PO Number:</strong> {orderExportData.poNumber}
-                    </Text>
+                )}
+                <Button
+                  onClick={() =>
+                    downloadCSVFile(
+                      invoiceCSVHeaders,
+                      getInvoiceCSVRows(data.orderExportData),
+                      `${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber?.trim() ? `-${sanitizeFilename(data.orderExportData.poNumber?.trim())}` : ""}-invoice.csv`,
+                    )
+                  }
+                  size="medium"
+                >
+                  Download Invoice CSV
+                </Button>
+                <Button
+                  onClick={() =>
+                    downloadCSVFile(
+                      productsCSVHeaders,
+                      getProductsCSVRows(data.orderExportData),
+                      `${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber?.trim() ? `-${sanitizeFilename(data.orderExportData.poNumber?.trim())}` : ""}-products.csv`,
+                    )
+                  }
+                  size="medium"
+                >
+                  Download Products CSV
+                </Button>
+                <Text as="h3" variant="headingMd">
+                  Line Items
+                </Text>
+                <BlockStack as="ul" gap="100">
+                  {data.orderExportData.lineItems.map((item, idx) => (
+                    <li key={idx}>
+                      <Text as="span">
+                        {item.quantity != item.currentQuantity && (
+                          <em>
+                            <s>{item.quantity}</s>&nbsp;
+                          </em>
+                        )}
+                        {item.currentQuantity} x {item.title} @
+                        <s>${item.rate.toFixed(2)}</s>&nbsp;$
+                        {(Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2)} = $
+                        {(
+                          item.currentQuantity *
+                          (Math.round(item.rate / 2 / 0.5) * 0.5)
+                        ).toFixed(2)}
+                      </Text>
+                    </li>
+                  ))}
+                  {data.orderExportData.lineItems.length === 0 && (
+                    <Text as="p">No line items found for this order.</Text>
                   )}
-                  <Button
-                    onClick={() =>
-                      downloadCSVFile(
-                        invoiceCSVHeaders,
-                        getInvoiceCSVRows(orderExportData),
-                        `${sanitizeFilename(orderExportData.customer)}-${sanitizeFilename(orderExportData.name)}${orderExportData.poNumber?.trim() ? `-${sanitizeFilename(orderExportData.poNumber?.trim())}` : ""}-invoice.csv`,
-                      )
-                    }
-                  >
-                    Download Invoice CSV
-                  </Button>
-                  <Button
-                    onClick={() =>
-                      downloadCSVFile(
-                        productsCSVHeaders,
-                        getProductsCSVRows(orderExportData),
-                        `${sanitizeFilename(orderExportData.customer)}-${sanitizeFilename(orderExportData.name)}${orderExportData.poNumber?.trim() ? `-${sanitizeFilename(orderExportData.poNumber?.trim())}` : ""}-products.csv`,
-                      )
-                    }
-                  >
-                    Download Products CSV
-                  </Button>
-
-                  <Text as="h3" variant="headingMd">
-                    Line Items
-                  </Text>
-                  <BlockStack as="ul" gap="100">
-                    {orderExportData.lineItems.map((item, idx) => (
-                      <li key={idx}>
-                        <Text as="span">
-                          {item.quantity != item.currentQuantity && (
-                            <em>
-                              <s>{item.quantity}</s>&nbsp;
-                            </em>
-                          )}
-                          {item.currentQuantity} x {item.title} @
-                          <s>${item.rate.toFixed(2)}</s>&nbsp;$
-                          {(Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2)} =
-                          $
-                          {(
-                            item.currentQuantity *
-                            (Math.round(item.rate / 2 / 0.5) * 0.5)
-                          ).toFixed(2)}
-                        </Text>
-                      </li>
-                    ))}
-                    {orderExportData.lineItems.length === 0 && (
-                      <Text as="p">No line items found for this order.</Text>
-                    )}
-                  </BlockStack>
                 </BlockStack>
-              </Card>
-
-              <Card title="4×6 Carton Labels" sectioned>
-                <BlockStack gap="400">
-                  <TextField
-                    label="Number of cartons (X)"
-                    type="number"
-                    min={1}
-                    value={String(cartonCount)}
-                    onChange={(v) =>
-                      setCartonCount(Math.max(1, Number(v) || 1))
-                    }
-                    autoComplete="off"
-                  />
-                  <Button onClick={onPrintLabels} primary>
-                    Print {cartonCount} Label{cartonCount > 1 ? "s" : ""}
-                  </Button>
-
-                  {/* Preview grid */}
-                  <div className="label-preview-grid">
-                    {Array.from({ length: cartonCount }, (_, i) => (
-                      <div className="label-4x6" key={`p-${i}`}>
-                        <div className="label-inner">
-                          <div className="row">
-                            <div className="k">Order:</div>
-                            <div className="v">{orderLabel}</div>
-                          </div>
-                          {poFromOrder && (
-                            <div className="row">
-                              <div className="k">PO#:</div>
-                              <div className="v">{poFromOrder}</div>
-                            </div>
-                          )}
-                          <div className="count">
-                            {i + 1} of {cartonCount}
-                          </div>
-                          <div className="mixed">MIXED CARTON</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Print-only container */}
-                  <div id="print-container">
-                    {Array.from({ length: cartonCount }, (_, i) => (
-                      <div className="print-sheet" key={`s-${i}`}>
-                        <div className="label-4x6">
-                          <div className="label-inner">
-                            <div className="row">
-                              <div className="k">Order:</div>
-                              <div className="v">{orderLabel}</div>
-                            </div>
-                            {poFromOrder && (
-                              <div className="row">
-                                <div className="k">PO#:</div>
-                                <div className="v">{poFromOrder}</div>
-                              </div>
-                            )}
-                            <div className="count">
-                              {i + 1} of {cartonCount}
-                            </div>
-                            <div className="mixed">MIXED CARTON</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </BlockStack>
-              </Card>
-            </>
+              </BlockStack>
+            </Card>
           )}
           {data?.error && (
             <Card sectioned>
