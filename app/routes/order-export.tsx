@@ -224,7 +224,7 @@ export default function OrderExportRoute() {
                     downloadCSVFile(
                       productsCSVHeaders,
                       getProductsCSVRows(data.orderExportData),
-                      `${sanitizeFilename(data.orderExportData.name)}-products.csv`,
+                      `${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber?.trim() ? `-${sanitizeFilename(data.orderExportData.poNumber?.trim())}` : ""}-products.csv`,
                     )
                   }
                   size="medium"
