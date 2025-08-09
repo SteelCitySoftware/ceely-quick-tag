@@ -148,7 +148,7 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
       new Date().toLocaleDateString("en-US"), // Shipping date
       "", // Tracking no
       "", // Shipping Charge
-      new Date().toLocaleDateString("en-US"), // Service Date
+      "", // Service Date
     ];
   });
 }
