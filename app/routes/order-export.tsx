@@ -24,7 +24,6 @@ import {
   sanitizeFilename,
 } from "../utils/csvExport";
 import { getOrderByQuery } from "./order-export.query";
-import "./order-export.css";
 
 // ----- Server: loader -----
 export const loader = async ({ request }: LoaderFunctionArgs) => {
