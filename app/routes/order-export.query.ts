@@ -47,15 +47,20 @@ export const getOrderByQuery = `#graphql
                     edges {
                       node {
                         id
-                        productTitle
-                        variantTitle
-                        totalQuantity
-                        variant {
-                          compareAtPrice
-                          price
-                          sku
-                          product {
-                            productType
+                        lineItem {
+                          title
+                          quantity
+                          currentQuantity
+                          originalUnitPriceSet {
+                            shopMoney {
+                              amount
+                            }
+                          }
+                          variant {
+                            sku
+                            product {
+                              productType
+                            }
                           }
                         }
                       }
