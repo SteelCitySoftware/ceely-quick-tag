@@ -4,6 +4,7 @@
 type LineItem = {
   title: string;
   quantity: number;
+  currentQuantity: number;
   rate: number;
   sku: string;
   category: string;
@@ -137,9 +138,9 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
       sanitizedTitle, // ProductName
       `${sanitizedCategory}:${sanitizedTitle}`, // Item(Product/Service) - changed from colon to hyphen
       sanitizedSku, // ItemDescription
-      item.quantity, // ItemQuantity
+      item.currentQuantity, // ItemQuantity
       (Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2), // ItemRate
-      (item.quantity * (Math.round(item.rate / 2 / 0.5) * 0.5)).toFixed(2), // ItemAmount
+      (item.currentQuantity * (Math.round(item.rate / 2 / 0.5) * 0.5)).toFixed(2), // ItemAmount
       "N", // Taxable
       "", // TaxRate
       "", // Shipping address

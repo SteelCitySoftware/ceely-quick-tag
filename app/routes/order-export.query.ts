@@ -18,6 +18,7 @@ export const getOrderByQuery = `#graphql
               node {
                 title
                 quantity
+                currentQuantity
                 originalUnitPriceSet {
                   shopMoney { amount }
                 }

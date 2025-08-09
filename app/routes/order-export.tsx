@@ -75,6 +75,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           ? order.lineItems.edges.map(({ node }) => ({
               title: node.title,
               quantity: node.quantity,
+              currentQuantity: node.currentQuantity,
               rate: parseFloat(
                 node.originalUnitPriceSet?.shopMoney?.amount ?? "0",
               ),
@@ -238,7 +239,12 @@ export default function OrderExportRoute() {
                   {data.orderExportData.lineItems.map((item, idx) => (
                     <li key={idx}>
                       <Text as="span">
-                        {item.quantity} x {item.title} @ ${item.rate.toFixed(2)}
+                        <s>
+                          {item.quantity != item.currentQuantity &&
+                            item.quantity}
+                        </s>
+                        {item.currentQuantity} x {item.title} @ $
+                        {item.rate.toFixed(2)}
                       </Text>
                     </li>
                   ))}
