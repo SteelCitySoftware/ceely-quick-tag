@@ -141,7 +141,7 @@ export default function OrderExportRoute() {
         .row { display:grid; grid-template-columns:0.9in 1fr; gap:0.08in; }
         .k { font-weight:700; font-size:20pt; }
         .v { font-size:25pt; word-break:break-word; }
-        .count { align-self:center; justify-self:center; font-size:60pt; font-weight:800; }
+        .count { align-self:center; justify-self:center; font-size:70pt; font-weight:800; }
         .mixed { align-self:end; text-align:center; font-size:50pt; font-weight:900; letter-spacing:1px; }
       </style>
     </head>
@@ -247,7 +247,7 @@ export default function OrderExportRoute() {
           {showDetails && data?.orderExportData && (
             <Card
               sectioned
-              title={`Export for Order: ${data.orderExportData.name}`}
+              title={`Export for Invoice: ${data.orderExportData.name}`}
             >
               <BlockStack gap="400">
                 <Banner
@@ -342,7 +342,7 @@ export default function OrderExportRoute() {
                       <div className="label-4x6" key={`p-${i}`}>
                         <div className="label-inner">
                           <div className="row">
-                            <div className="k">Order:</div>
+                            <div className="k">Invoice:</div>
                             <div className="v">{orderLabel}</div>
                           </div>
                           {poFromOrder && (
