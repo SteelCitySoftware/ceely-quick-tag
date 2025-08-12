@@ -9,6 +9,7 @@ interface InventoryAdjustFormProps {
   locationId: string;
 }
 
+
 interface FetcherData {
   success?: boolean;
   adjustmentResult?: {
@@ -16,7 +17,6 @@ interface FetcherData {
     productId?: string;
   };
 }
-
 export function InventoryAdjustForm({
   inventoryLevelName,
   label,
@@ -24,7 +24,7 @@ export function InventoryAdjustForm({
   levelId,
   locationId,
 }: InventoryAdjustFormProps) {
-  const fetcher = useFetcher<FetcherData>();
+  const fetcher = useFetcher();
   const [originalQty, setOriginalQty] = useState(quantity);
   const [inputQty, setInputQty] = useState(quantity);
   const delta = inputQty - originalQty;
@@ -44,7 +44,7 @@ export function InventoryAdjustForm({
         fetcher.submit({ productId }, { method: "POST" });
       }
     }
-  }, [fetcher]);
+  }, [fetcher.state, fetcher.data]);
 
   return (
     <form
