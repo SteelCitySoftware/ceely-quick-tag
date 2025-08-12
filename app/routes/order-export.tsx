@@ -177,7 +177,7 @@ export default function OrderExportRoute() {
     const html = `
   <html>
     <head>
-      <title>${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)} - 4x6 Carton Labels</title>
+      <title>${sanitizeFilename(orderData.customer)}-${sanitizeFilename(orderData.name)} - 4x6 Carton Labels</title>
       <meta charset="utf-8" />
       <style>
         @page { size: 4in 6in; margin: 0; }
@@ -275,7 +275,7 @@ export default function OrderExportRoute() {
   >("ascending");
 
   // 50% rounded to nearest $0.50
-  const wsCostCalc = useCallback(
+  const wsPriceCalc = useCallback(
     (rate: number) => Math.round(rate / 2 / 0.5) * 0.5,
     [],
   );
@@ -289,8 +289,8 @@ export default function OrderExportRoute() {
     msrpDisplay: ReactNode; // <s>$..</s>
     msrpValue: number; // for sorting
     discount: string; // "50%"
-    wsCostDisplay: string; // "$.."
-    wsCostValue: number;
+    wsPriceDisplay: string; // "$.."
+    wsPriceValue: number;
     totalDisplay: string; // "$.."
     totalValue: number;
   };
@@ -298,7 +298,7 @@ export default function OrderExportRoute() {
   const baseRows: RowModel[] = useMemo(() => {
     const items = orderData?.lineItems || [];
     return items.map((item: LineItem) => {
-      const ws = wsCostCalc(item.rate);
+      const ws = wsPriceCalc(item.rate);
       const total = item.currentQuantity * ws;
       return {
         qtyDisplay:
@@ -319,13 +319,13 @@ export default function OrderExportRoute() {
         msrpDisplay: <s>${item.rate.toFixed(2)}</s>,
         msrpValue: Number(item.rate) || 0,
         discount: "50%",
-        wsCostDisplay: `$${ws.toFixed(2)}`,
-        wsCostValue: ws,
+        wsPriceDisplay: `$${ws.toFixed(2)}`,
+        wsPriceValue: ws,
         totalDisplay: `$${total.toFixed(2)}`,
         totalValue: total,
       };
     });
-  }, [orderData?.lineItems, wsCostCalc]);
+  }, [orderData?.lineItems, wsPriceCalc]);
 
   const sortedRows = useMemo(() => {
     const rows = [...baseRows];
@@ -346,7 +346,7 @@ export default function OrderExportRoute() {
         case 5:
           return 0; // Discount fixed
         case 6:
-          return (a.wsCostValue - b.wsCostValue) * dir; // WS Cost
+          return (a.wsPriceValue - b.wsPriceValue) * dir; // WS Price
         case 7:
           return (a.totalValue - b.totalValue) * dir; // Total
         default:
@@ -366,7 +366,7 @@ export default function OrderExportRoute() {
         r.category,
         r.msrpDisplay,
         r.discount,
-        r.wsCostDisplay,
+        r.wsPriceDisplay,
         r.totalDisplay,
       ]),
     [sortedRows],
@@ -579,11 +579,6 @@ export default function OrderExportRoute() {
                       Download Products CSV
                     </Button>
                   </BlockStack>
-
-                  <Text as="h3" variant="headingMd">
-                    Line Items
-                  </Text>
-
                   <DataTable
                     columnContentTypes={[
                       "text", // Qty (ReactNode)
@@ -592,7 +587,7 @@ export default function OrderExportRoute() {
                       "text", // Category
                       "text", // MSRP (ReactNode)
                       "text", // Discount
-                      "text", // WS Cost
+                      "text", // WS Price
                       "text", // Total
                     ]}
                     headings={[
@@ -602,7 +597,7 @@ export default function OrderExportRoute() {
                       "Category",
                       "MSRP",
                       "Discount",
-                      "WS Cost",
+                      "WS Price",
                       "Total",
                     ]}
                     rows={rowsForDataTable}
