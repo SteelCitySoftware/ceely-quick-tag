@@ -436,6 +436,84 @@ export default function OrderExportRoute() {
               <Box padding="400">
                 <BlockStack gap="400">
                   <Text as="h3" variant="headingMd">
+                    4×6 Carton Labels
+                  </Text>
+
+                  <TextField
+                    label="Number of cartons (X)"
+                    type="number"
+                    min="1"
+                    value={String(cartonCount)}
+                    onChange={(v) =>
+                      setCartonCount(Math.max(1, Number(v) || 1))
+                    }
+                    autoComplete="off"
+                  />
+
+                  <Button onClick={onPrintLabels} variant="primary">
+                    Print {String(cartonCount)} Label
+                    {cartonCount > 1 ? "s" : ""}
+                  </Button>
+                  {/* On-screen preview
+                  <div className="label-preview-grid">
+                    {Array.from({ length: cartonCount }, (_, i) => (
+                      <div className="label-4x6" key={`p-${i}`}>
+                        <div className="label-inner">
+                          <div className="row">
+                            <div className="k">Invoice:</div>
+                            <div className="v">{orderLabel}</div>
+                          </div>
+                          {poFromOrder && (
+                            <div className="row">
+                              <div className="k">PO#:</div>
+                              <div className="v">{poFromOrder}</div>
+                            </div>
+                          )}
+                          <div className="count">
+                            {i + 1} of {cartonCount}
+                          </div>
+                          <div className="mixed">MIXED CARTON</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div> */}
+
+                  {/* Print-only container (revealed by @media print) */}
+                  <div ref={printRef} style={{ display: "none" }}>
+                    {Array.from({ length: cartonCount }, (_, i) => (
+                      <div className="print-sheet" key={i}>
+                        <div className="label-4x6">
+                          <div className="label-inner">
+                            <div className="logo">
+                              <img
+                                src="https://cdn.shopify.com/s/files/1/0718/6789/files/Brutus_Monroe_Logo_wih_stroke_644x247_c266ecd4-e053-4c07-92e5-6061c1ee97c8_450x.png?v=1652891855"
+                                alt="Store  Logo"
+                              />
+                            </div>
+                            <div className="row">
+                              <div className="k">Invoice:</div>
+                              <div className="v">{orderLabel}</div>
+                            </div>
+                            {poFromOrder && (
+                              <div className="row">
+                                <div className="k">PO#:</div>
+                                <div className="v">{poFromOrder}</div>
+                              </div>
+                            )}
+                            <div className="count">
+                              {i + 1} of {cartonCount}
+                            </div>
+                            <div className="mixed">MIXED CARTON</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </BlockStack>
+              </Box>
+              <Box padding="400">
+                <BlockStack gap="400">
+                  <Text as="h3" variant="headingMd">
                     Export for Invoice: <strong>{orderData.name}</strong>
                   </Text>
 
@@ -533,85 +611,6 @@ export default function OrderExportRoute() {
                     initialSortColumnIndex={0}
                     onSort={handleSort}
                   />
-                </BlockStack>
-              </Box>
-
-              <Box padding="400">
-                <BlockStack gap="400">
-                  <Text as="h3" variant="headingMd">
-                    4×6 Carton Labels
-                  </Text>
-
-                  <TextField
-                    label="Number of cartons (X)"
-                    type="number"
-                    min="1"
-                    value={String(cartonCount)}
-                    onChange={(v) =>
-                      setCartonCount(Math.max(1, Number(v) || 1))
-                    }
-                    autoComplete="off"
-                  />
-
-                  <Button onClick={onPrintLabels} variant="primary">
-                    Print {String(cartonCount)} Label
-                    {cartonCount > 1 ? "s" : ""}
-                  </Button>
-                  {/* On-screen preview
-                  <div className="label-preview-grid">
-                    {Array.from({ length: cartonCount }, (_, i) => (
-                      <div className="label-4x6" key={`p-${i}`}>
-                        <div className="label-inner">
-                          <div className="row">
-                            <div className="k">Invoice:</div>
-                            <div className="v">{orderLabel}</div>
-                          </div>
-                          {poFromOrder && (
-                            <div className="row">
-                              <div className="k">PO#:</div>
-                              <div className="v">{poFromOrder}</div>
-                            </div>
-                          )}
-                          <div className="count">
-                            {i + 1} of {cartonCount}
-                          </div>
-                          <div className="mixed">MIXED CARTON</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div> */}
-
-                  {/* Print-only container (revealed by @media print) */}
-                  <div ref={printRef} style={{ display: "none" }}>
-                    {Array.from({ length: cartonCount }, (_, i) => (
-                      <div className="print-sheet" key={i}>
-                        <div className="label-4x6">
-                          <div className="label-inner">
-                            <div className="logo">
-                              <img
-                                src="https://cdn.shopify.com/s/files/1/0718/6789/files/Brutus_Monroe_Logo_wih_stroke_644x247_c266ecd4-e053-4c07-92e5-6061c1ee97c8_450x.png?v=1652891855"
-                                alt="Store  Logo"
-                              />
-                            </div>
-                            <div className="row">
-                              <div className="k">Invoice:</div>
-                              <div className="v">{orderLabel}</div>
-                            </div>
-                            {poFromOrder && (
-                              <div className="row">
-                                <div className="k">PO#:</div>
-                                <div className="v">{poFromOrder}</div>
-                              </div>
-                            )}
-                            <div className="count">
-                              {i + 1} of {cartonCount}
-                            </div>
-                            <div className="mixed">MIXED CARTON</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </BlockStack>
               </Box>
             </Card>
