@@ -142,7 +142,7 @@ export default function OrderExportRoute() {
         .k { font-weight:700; font-size:20pt; }
         .v { font-size:25pt; word-break:break-word; }
         .count { align-self:center; justify-self:center; font-size:60pt; font-weight:800; }
-        .mixed { align-self:end; text-align:center; font-size:50pt; font-weight:900; letter-spacing:1px; }
+        .mixed { align-self:end; text-align:center; font-size:50pt; font-weight:900; letter-spacing:1px; background:black; color:white; border-radius:12px; }
       </style>
     </head>
     <body>${content}</body>
