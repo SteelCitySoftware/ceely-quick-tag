@@ -1,7 +1,10 @@
 // GraphQL queries and mutations for Shopify operations
+
+export const ADMIN_INFO_QUERY = `#graphql
 query adminInfo {
   shop {
     url
+    # Add additional fields as needed
   }
 }`;
 
