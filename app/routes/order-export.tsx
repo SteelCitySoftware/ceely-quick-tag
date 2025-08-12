@@ -209,19 +209,19 @@ export default function OrderExportRoute() {
                 Export Shopify Order to QuickBooks
               </Text>
               <Text as="p">
-                Enter an Order Name (like <code>#1001</code>) or an Order ID to
-                fetch the order and export details in QuickBooks-friendly CSV
-                format.
+                Enter an Order Number or use the "Export to Quickbooks" directly
+                in the dropdown to fetch the order and export details in
+                QuickBooks-friendly CSV format.
               </Text>
               <TextField
-                label="Order Name (e.g. #1001)"
+                label="Order Number (e.g. 142442)"
                 value={orderNameState}
                 onChange={setOrderNameState}
                 autoComplete="off"
                 disabled={isLoading}
               />
               <TextField
-                label="Order ID"
+                label="Internal Shopify ID (e.g. number in URL)"
                 value={orderIdState}
                 onChange={setOrderIdState}
                 autoComplete="off"
@@ -254,6 +254,12 @@ export default function OrderExportRoute() {
                   status="success"
                   title="Order loaded and ready for export."
                 />
+                <Text as="h3" variant="headingMd">
+                  Invoice:{" "}
+                  <Text as="span" fontWeight="bold">
+                    {data.orderExportData.name}
+                  </Text>
+                </Text>
                 <Text as="h3" variant="headingMd">
                   Customer:{" "}
                   <Text as="span" fontWeight="bold">
