@@ -134,7 +134,7 @@ export default function OrderExportRoute() {
           width: 4in; height: 6in; page-break-after: always;
           display:flex; align-items:center; justify-content:center; padding:0.15in;
         }
-        .label-4x6 { width:100%; height:100%; border:2px solid #000; display:flex; align-items:center; justify-content:center; }
+        .label-4x6 { width:100%; height:100%; border:2px solid #000; border-radius:12px; display:flex; align-items:center; justify-content:center; }
         .label-inner { width:100%; height:100%; padding:0.2in; display:grid; grid-template-rows:auto auto auto 1fr auto; gap:0.08in; }
         .logo { text-align:center; }
         .logo img { max-width: 100%; height: auto; max-height: 1in; }
@@ -143,6 +143,20 @@ export default function OrderExportRoute() {
         .v { font-size:25pt; word-break:break-word; }
         .count { align-self:center; justify-self:center; font-size:60pt; font-weight:800; }
         .mixed { align-self:end; text-align:center; font-size:50pt; font-weight:900; letter-spacing:1px; background:black; color:white; border-radius:12px; }
+        @media print {
+          .mixed {
+            align-self: end !important;
+            text-align: center !important;
+            font-size: 50pt !important;
+            font-weight: 900 !important;
+            letter-spacing: 1px !important;
+            background: black !important;
+            color: white !important;
+            border-radius: 12px !important;
+            -webkit-print-color-adjust: exact !important; /* Ensures background prints in WebKit browsers */
+            print-color-adjust: exact !important;         /* Modern property for same purpose */
+          }
+        }
       </style>
     </head>
     <body>${content}</body>
