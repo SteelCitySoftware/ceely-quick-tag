@@ -356,7 +356,7 @@ export default function OrderExportRoute() {
                     Print {cartonCount} Label{cartonCount > 1 ? "s" : ""}
                   </Button>
 
-                  {/* On-screen preview */}
+                  {/* On-screen preview
                   <div className="label-preview-grid">
                     {Array.from({ length: cartonCount }, (_, i) => (
                       <div className="label-4x6" key={`p-${i}`}>
@@ -378,7 +378,7 @@ export default function OrderExportRoute() {
                         </div>
                       </div>
                     ))}
-                  </div>
+                  </div> */}
 
                   {/* Print-only container (revealed by @media print) */}
                   <div ref={printRef} style={{ display: "none" }}>
@@ -393,7 +393,7 @@ export default function OrderExportRoute() {
                               />
                             </div>
                             <div className="row">
-                              <div className="k">Order:</div>
+                              <div className="k">Invoice:</div>
                               <div className="v">{orderLabel}</div>
                             </div>
                             {poFromOrder && (
