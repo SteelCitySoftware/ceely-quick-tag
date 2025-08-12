@@ -23,7 +23,6 @@ export const getOrderByQuery = `#graphql
                   shopMoney { amount }
                 }
                 variant {
-                  title
                   sku
                   product {
                     productType

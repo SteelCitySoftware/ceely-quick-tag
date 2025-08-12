@@ -121,7 +121,7 @@ export function downloadCSVFile(headers: string[], rows: (string | number)[][], 
 }
 
 /** Invoice CSV rows generator */
-export function getInvoiceCSVRows(order: OrderExportData): (string | number |undefined)[][] {
+export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][] {
   return order.lineItems.map(item => {
     const sanitizedTitle = sanitizeQBOText(item.title || '');
     const sanitizedCategory = sanitizeQBOText(item.category || '');

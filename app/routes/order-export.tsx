@@ -58,12 +58,8 @@ type GqlLineItemNode = {
     shopMoney?: { amount?: string | null } | null;
   } | null;
   variant?: {
-    title?: string | null;
     sku?: string | null;
-    product?: {
-      title?: string | null;
-      productType?: string | null;
-    } | null;
+    product?: { productType?: string | null } | null;
   } | null;
 };
 
@@ -113,11 +109,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const lineItems: LineItem[] = Array.isArray(order.lineItems?.edges)
       ? (order.lineItems.edges as Array<{ node: GqlLineItemNode }>).map(
           ({ node }) => ({
-            title:
-              node?.variant?.title ??
-              node.variant?.product?.title ??
-              node.title ??
-              "",
+            title: node.title,
             quantity: node.quantity,
             currentQuantity: node.currentQuantity,
             rate: parseFloat(
