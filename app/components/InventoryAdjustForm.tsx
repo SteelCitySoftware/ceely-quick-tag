@@ -9,6 +9,14 @@ interface InventoryAdjustFormProps {
   locationId: string;
 }
 
+
+interface FetcherData {
+  success?: boolean;
+  adjustmentResult?: {
+    quantityAfterChange?: number;
+    productId?: string;
+  };
+}
 export function InventoryAdjustForm({
   inventoryLevelName,
   label,

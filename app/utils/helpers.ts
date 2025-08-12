@@ -1,5 +1,4 @@
-// Utility helper functions
-
+// Helper utility functions
 import successSound from "../routes/sounds/success.mp3";
 import failureSound from "../routes/sounds/failure.mp3";
 
@@ -37,6 +36,18 @@ export const playFailureSound = (): void => {
  * Speak text using browser's speech synthesis
  */
 export const speakText = (text: string): void => {
+
+export function playSuccessSound(): void {
+  const audio = new Audio(successSound);
+  audio.play();
+}
+
+export function playFailureSound(): void {
+  const audio = new Audio(failureSound);
+  audio.play();
+}
+
+export function speakText(text: string): void {
   if ("speechSynthesis" in window) {
     const utterance = new SpeechSynthesisUtterance(text);
     window.speechSynthesis.speak(utterance);

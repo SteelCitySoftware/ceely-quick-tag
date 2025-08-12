@@ -18,6 +18,7 @@ export const getOrderByQuery = `#graphql
               node {
                 title
                 quantity
+                currentQuantity
                 originalUnitPriceSet {
                   shopMoney { amount }
                 }
@@ -25,6 +26,45 @@ export const getOrderByQuery = `#graphql
                   sku
                   product {
                     productType
+                  }
+                }
+              }
+            }
+          }
+          fulfillments {
+            id
+            status
+            name
+            trackingInfo {
+              company
+              number
+              url
+            }
+            fulfillmentOrders(first: 10) {
+              edges {
+                node {
+                  lineItems(first: 250) {
+                    edges {
+                      node {
+                        id
+                        lineItem {
+                          title
+                          quantity
+                          currentQuantity
+                          originalUnitPriceSet {
+                            shopMoney {
+                              amount
+                            }
+                          }
+                          variant {
+                            sku
+                            product {
+                              productType
+                            }
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
