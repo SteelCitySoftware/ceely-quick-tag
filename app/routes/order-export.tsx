@@ -590,7 +590,7 @@ export default function OrderExportRoute() {
                             <div className="logo">
                               <img
                                 src="https://cdn.shopify.com/s/files/1/0718/6789/files/Brutus_Monroe_Logo_wih_stroke_644x247_c266ecd4-e053-4c07-92e5-6061c1ee97c8_450x.png?v=1652891855"
-                                alt="Store Logo"
+                                alt="Store  Logo"
                               />
                             </div>
                             <div className="row">
