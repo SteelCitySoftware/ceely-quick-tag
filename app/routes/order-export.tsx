@@ -123,7 +123,7 @@ export default function OrderExportRoute() {
     const html = `
   <html>
     <head>
-      <title>4x6 Carton Labels</title>
+      <title>${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)} - 4x6 Carton Labels</title>
       <meta charset="utf-8" />
       <style>
         @page { size: 4in 6in; margin: 0; }
@@ -138,7 +138,7 @@ export default function OrderExportRoute() {
         .label-inner { width:100%; height:100%; padding:0.2in; display:grid; grid-template-rows:auto auto auto 1fr auto; gap:0.08in; }
         .logo { text-align:center; }
         .logo img { max-width: 100%; height: auto; max-height: 1in; }
-        .row { display:grid; grid-template-columns:0.9in 1fr; gap:0.08in; }
+        .row { display:grid; grid-template-columns:0.9in 1fr; gap:0.14in; }
         .k { font-weight:700; font-size:20pt; }
         .v { font-size:25pt; word-break:break-word; }
         .count { align-self:center; justify-self:center; font-size:60pt; font-weight:800; }
