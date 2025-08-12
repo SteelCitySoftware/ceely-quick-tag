@@ -177,7 +177,7 @@ export default function OrderExportRoute() {
     const html = `
   <html>
     <head>
-      <title>${sanitizeFilename(orderData.customer)}-${sanitizeFilename(orderData.name)} - 4x6 Carton Labels</title>
+      <title>${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)} - 4x6 Carton Labels</title>
       <meta charset="utf-8" />
       <style>
         @page { size: 4in 6in; margin: 0; }
@@ -209,6 +209,7 @@ export default function OrderExportRoute() {
             border-radius: 12px !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+
           }
         }
       </style>
@@ -556,6 +557,29 @@ export default function OrderExportRoute() {
                     Print {String(cartonCount)} Label
                     {cartonCount > 1 ? "s" : ""}
                   </Button>
+                  {/* On-screen preview
+                  <div className="label-preview-grid">
+                    {Array.from({ length: cartonCount }, (_, i) => (
+                      <div className="label-4x6" key={`p-${i}`}>
+                        <div className="label-inner">
+                          <div className="row">
+                            <div className="k">Invoice:</div>
+                            <div className="v">{orderLabel}</div>
+                          </div>
+                          {poFromOrder && (
+                            <div className="row">
+                              <div className="k">PO#:</div>
+                              <div className="v">{poFromOrder}</div>
+                            </div>
+                          )}
+                          <div className="count">
+                            {i + 1} of {cartonCount}
+                          </div>
+                          <div className="mixed">MIXED CARTON</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div> */}
 
                   {/* Print-only container (revealed by @media print) */}
                   <div ref={printRef} style={{ display: "none" }}>

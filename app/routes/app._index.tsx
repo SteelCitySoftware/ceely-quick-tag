@@ -25,15 +25,21 @@ import { authenticate } from "../shopify.server";
 // Custom imports
 import useFocusManagement from "../hooks/useFocusManagement";
 import { InventoryAdjustForm } from "../components/InventoryAdjustForm";
-import { playSuccessSound, playFailureSound, speakText, replaceCharacters } from "../utils/helpers";
+import { 
+  playSuccessSound, 
+  playFailureSound, 
+  speakText, 
+  replaceCharacters,
+  sleep
+} from "../utils/helpers";
 import {
   ADMIN_INFO_QUERY,
   GET_PRODUCT_QUERY,
-  SEARCH_PRODUCTS_BY_BARCODE_QUERY,
-  SEARCH_PRODUCTS_BY_TAG_QUERY,
   ADJUST_INVENTORY_MUTATION,
   REMOVE_TAGS_MUTATION,
   ADD_TAGS_MUTATION,
+  SEARCH_PRODUCTS_BY_BARCODE_QUERY,
+  SEARCH_PRODUCTS_BY_TAG_QUERY
 } from "../graphql/shopifyQueries";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -588,23 +594,8 @@ export default function Index() {
     }));
   };
 
-  /*   useEffect(() => {
-    const handleFocusChange = (event) => {
-      sleep(2000);
-      const focusedElement = document.activeElement;
-      const tagField = document.getElementById("tag");
-      const barcodeField = document.getElementById("barcodeField");
-      if (focusedElement !== tagField && focusedElement !== barcodeField) {
-        barcodeField?.focus();
-      }
-    };
 
-    document.addEventListener("focusin", handleFocusChange);
 
-    return () => {
-      document.removeEventListener("focusin", handleFocusChange);
-    };
-  }, []); */
 
   useEffect(() => {
     if (fetcher.data) {
