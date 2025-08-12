@@ -1,6 +1,7 @@
 import { json } from "@remix-run/node";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import type { ReactNode } from "react";
 import {
   BlockStack,
   Text,
@@ -12,6 +13,8 @@ import {
   Banner,
   InlineError,
   Spinner,
+  DataTable,
+  Box,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { useFetcher, useLoaderData } from "@remix-run/react";
@@ -25,15 +28,51 @@ import {
 } from "../utils/csvExport";
 import { getOrderByQuery } from "./order-export.query";
 
-// ----- Server: loader -----
+// ------------------ Types ------------------
+type LineItem = {
+  title: string;
+  quantity: number;
+  currentQuantity: number;
+  rate: number;
+  sku: string;
+  category: string;
+};
+
+type OrderExportData = {
+  name: string;
+  customer: string;
+  createdAt: string;
+  lineItems: LineItem[];
+  poNumber?: string; // normalized to undefined (no null)
+};
+
+type ActionData = { orderExportData: OrderExportData } | { error: string };
+type LoaderData = { orderName: string | null; orderId: string | null };
+
+// GraphQL node type used when mapping edges
+type GqlLineItemNode = {
+  title: string;
+  quantity: number;
+  currentQuantity: number;
+  originalUnitPriceSet?: {
+    shopMoney?: { amount?: string | null } | null;
+  } | null;
+  variant?: {
+    sku?: string | null;
+    product?: { productType?: string | null } | null;
+  } | null;
+};
+
+// ------------------ Server: loader ------------------
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const orderName = url.searchParams.get("order_number");
   const orderId = url.searchParams.get("id");
-  return json({ orderName, orderId });
+  const data: LoaderData = { orderName, orderId };
+  return json<LoaderData>(data);
 };
 
-// ----- Server: action -----
+// ------------------ Server: action ------------------
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
@@ -42,28 +81,47 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const orderName = formData.get("orderName")?.toString();
     const orderId = formData.get("orderId")?.toString();
 
-    let query;
+    let query: string;
     if (orderId) {
       query = `id:${orderId}`;
     } else if (orderName) {
       query = `name:${orderName.replace(/^#/, "")}`;
     } else {
-      return json({ error: "Missing order identifier" }, { status: 400 });
+      return json<ActionData>(
+        { error: "Missing order identifier" },
+        { status: 400 },
+      );
     }
 
     const orderResponse = await admin.graphql(getOrderByQuery, {
       variables: { query },
     });
+    // We only need the first order
+    const orderEdges = (await orderResponse.json()).data?.orders?.edges as
+      | Array<{ node: any }>
+      | undefined;
 
-    const orderEdges = (await orderResponse.json()).data?.orders?.edges;
     const order = orderEdges?.[0]?.node;
-
     if (!order) {
-      return json({ error: "Order not found" }, { status: 404 });
+      return json<ActionData>({ error: "Order not found" }, { status: 404 });
     }
 
-    // Extra null checks for safety
-    return json({
+    const lineItems: LineItem[] = Array.isArray(order.lineItems?.edges)
+      ? (order.lineItems.edges as Array<{ node: GqlLineItemNode }>).map(
+          ({ node }) => ({
+            title: node.title,
+            quantity: node.quantity,
+            currentQuantity: node.currentQuantity,
+            rate: parseFloat(
+              node.originalUnitPriceSet?.shopMoney?.amount ?? "0",
+            ),
+            sku: node.variant?.sku ?? "",
+            category: node.variant?.product?.productType ?? "",
+          }),
+        )
+      : [];
+
+    return json<ActionData>({
       orderExportData: {
         name: order.name,
         customer:
@@ -71,31 +129,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           order.customer?.displayName ||
           "Guest",
         createdAt: order.createdAt,
-        lineItems: Array.isArray(order.lineItems?.edges)
-          ? order.lineItems.edges.map(({ node }) => ({
-              title: node.title,
-              quantity: node.quantity,
-              currentQuantity: node.currentQuantity,
-              rate: parseFloat(
-                node.originalUnitPriceSet?.shopMoney?.amount ?? "0",
-              ),
-              sku: node.variant?.sku || "",
-              category: node.variant?.product?.productType || "",
-            }))
-          : [],
-        poNumber: order?.customerPONumber?.value,
+        lineItems,
+        poNumber: order?.customerPONumber?.value ?? undefined, // normalize to undefined
       },
     });
   }
 
-  return json({ error: "Invalid submission" }, { status: 400 });
+  return json<ActionData>({ error: "Invalid submission" }, { status: 400 });
 };
 
-// ----- Client: Component -----
+// ------------------ Client: Component ------------------
 export default function OrderExportRoute() {
-  const fetcher = useFetcher<typeof action>();
+  const fetcher = useFetcher<ActionData>();
+  const { orderName, orderId: initialOrderId } = useLoaderData<LoaderData>();
   const data = fetcher.data;
-  const { orderName, orderId: initialOrderId } = useLoaderData<typeof loader>();
+
+  // Narrow the union {orderExportData}|{error}
+  const orderData: OrderExportData | undefined =
+    data && "orderExportData" in data ? data.orderExportData : undefined;
+  const actionError: string | undefined =
+    data && "error" in data ? data.error : undefined;
+
   const [orderNameState, setOrderNameState] = useState(orderName || "");
   const [orderIdState, setOrderIdState] = useState(initialOrderId || "");
   const [isLoading, setIsLoading] = useState(false);
@@ -107,11 +161,11 @@ export default function OrderExportRoute() {
   const [cartonCount, setCartonCount] = useState<number>(1);
 
   // Use existing data if present
-  const orderExportData = data?.orderExportData;
-  const orderLabel = orderExportData?.name ?? orderNameState ?? "";
-  const poFromOrder = orderExportData?.poNumber?.trim() || "";
+  const orderLabel = orderData?.name ?? orderNameState ?? "";
+  const poFromOrder = orderData?.poNumber?.trim() || "";
 
   const onPrintLabels = () => {
+    if (!orderData) return; // guard
     if (cartonCount <= 0 || !printRef.current) return;
 
     const content = printRef.current.innerHTML?.trim();
@@ -123,7 +177,7 @@ export default function OrderExportRoute() {
     const html = `
   <html>
     <head>
-      <title>${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)} - 4x6 Carton Labels</title>
+      <title>${sanitizeFilename(orderData.customer)}-${sanitizeFilename(orderData.name)} - 4x6 Carton Labels</title>
       <meta charset="utf-8" />
       <style>
         @page { size: 4in 6in; margin: 0; }
@@ -153,8 +207,8 @@ export default function OrderExportRoute() {
             background: black !important;
             color: white !important;
             border-radius: 12px !important;
-            -webkit-print-color-adjust: exact !important; /* Ensures background prints in WebKit browsers */
-            print-color-adjust: exact !important;         /* Modern property for same purpose */
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       </style>
@@ -209,176 +263,299 @@ export default function OrderExportRoute() {
   useEffect(() => {
     if (fetcher.state === "idle") {
       setIsLoading(false);
-      if (fetcher.data?.orderExportData) setShowDetails(true);
+      if (orderData) setShowDetails(true);
     }
-  }, [fetcher.state, fetcher.data]);
+  }, [fetcher.state, orderData]);
+
+  // ---------- Line Items: Sortable DataTable ----------
+  const [sortColumnIndex, setSortColumnIndex] = useState<number>(0);
+  const [sortDirection, setSortDirection] = useState<
+    "ascending" | "descending"
+  >("ascending");
+
+  // 50% rounded to nearest $0.50
+  const wsCostCalc = useCallback(
+    (rate: number) => Math.round(rate / 2 / 0.5) * 0.5,
+    [],
+  );
+
+  type RowModel = {
+    qtyDisplay: ReactNode; // with strike logic
+    qtyValue: number; // for sorting
+    product: string;
+    sku: string;
+    category: string;
+    msrpDisplay: ReactNode; // <s>$..</s>
+    msrpValue: number; // for sorting
+    discount: string; // "50%"
+    wsCostDisplay: string; // "$.."
+    wsCostValue: number;
+    totalDisplay: string; // "$.."
+    totalValue: number;
+  };
+
+  const baseRows: RowModel[] = useMemo(() => {
+    const items = orderData?.lineItems || [];
+    return items.map((item: LineItem) => {
+      const ws = wsCostCalc(item.rate);
+      const total = item.currentQuantity * ws;
+      return {
+        qtyDisplay:
+          item.quantity !== item.currentQuantity ? (
+            <>
+              <em>
+                <s>{item.quantity}</s>&nbsp;
+              </em>
+              {item.currentQuantity}
+            </>
+          ) : (
+            item.currentQuantity
+          ),
+        qtyValue: Number(item.currentQuantity) || 0,
+        product: item.title || "",
+        sku: item.sku || "",
+        category: item.category || "",
+        msrpDisplay: <s>${item.rate.toFixed(2)}</s>,
+        msrpValue: Number(item.rate) || 0,
+        discount: "50%",
+        wsCostDisplay: `$${ws.toFixed(2)}`,
+        wsCostValue: ws,
+        totalDisplay: `$${total.toFixed(2)}`,
+        totalValue: total,
+      };
+    });
+  }, [orderData?.lineItems, wsCostCalc]);
+
+  const sortedRows = useMemo(() => {
+    const rows = [...baseRows];
+    const dir = sortDirection === "ascending" ? 1 : -1;
+
+    rows.sort((a, b) => {
+      switch (sortColumnIndex) {
+        case 0:
+          return (a.qtyValue - b.qtyValue) * dir; // Qty
+        case 1:
+          return a.product.localeCompare(b.product) * dir; // Product
+        case 2:
+          return a.sku.localeCompare(b.sku) * dir; // SKU
+        case 3:
+          return a.category.localeCompare(b.category) * dir; // Category
+        case 4:
+          return (a.msrpValue - b.msrpValue) * dir; // MSRP
+        case 5:
+          return 0; // Discount fixed
+        case 6:
+          return (a.wsCostValue - b.wsCostValue) * dir; // WS Cost
+        case 7:
+          return (a.totalValue - b.totalValue) * dir; // Total
+        default:
+          return 0;
+      }
+    });
+
+    return rows;
+  }, [baseRows, sortColumnIndex, sortDirection]);
+
+  const rowsForDataTable = useMemo(
+    () =>
+      sortedRows.map((r) => [
+        r.qtyDisplay,
+        r.product,
+        r.sku,
+        r.category,
+        r.msrpDisplay,
+        r.discount,
+        r.wsCostDisplay,
+        r.totalDisplay,
+      ]),
+    [sortedRows],
+  );
+
+  const handleSort = useCallback(
+    (columnIndex: number, direction: "ascending" | "descending") => {
+      setSortColumnIndex(columnIndex);
+      setSortDirection(direction);
+    },
+    [],
+  );
 
   return (
     <Page title="Order Export">
       <Layout>
         <Layout.Section>
-          <Card sectioned>
-            <BlockStack gap="400">
-              <Text as="h2" variant="headingLg">
-                Export Shopify Order to QuickBooks
-              </Text>
-              <Text as="p">
-                Enter an Order Number or use the "Export to Quickbooks" directly
-                in the dropdown to fetch the order and export details in
-                QuickBooks-friendly CSV format.
-              </Text>
-              <TextField
-                label="Order Number (e.g. 142442)"
-                value={orderNameState}
-                onChange={setOrderNameState}
-                autoComplete="off"
-                disabled={isLoading}
-              />
-              <TextField
-                label="Internal Shopify ID (e.g. number in URL)"
-                value={orderIdState}
-                onChange={setOrderIdState}
-                autoComplete="off"
-                disabled={isLoading}
-              />
-              {inputError && (
-                <InlineError message={inputError} fieldID="orderName" />
-              )}
-              <Button onClick={handleFetch} loading={isLoading} primary>
-                Fetch Order
-              </Button>
-              {isLoading && (
-                <Spinner
-                  accessibilityLabel="Loading order details"
-                  size="small"
+          <Card>
+            <Box padding="400">
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingLg">
+                  Export Shopify Order to QuickBooks
+                </Text>
+                <Text as="p">
+                  Enter an Order Number or use the "Export to Quickbooks"
+                  directly in the dropdown to fetch the order and export details
+                  in QuickBooks-friendly CSV format.
+                </Text>
+                <TextField
+                  label="Order Number (e.g. 142442)"
+                  value={orderNameState}
+                  onChange={setOrderNameState}
+                  autoComplete="off"
+                  disabled={isLoading}
                 />
-              )}
-            </BlockStack>
+                <TextField
+                  label="Internal Shopify ID (e.g. number in URL)"
+                  value={orderIdState}
+                  onChange={setOrderIdState}
+                  autoComplete="off"
+                  disabled={isLoading}
+                />
+                {inputError && (
+                  <InlineError message={inputError} fieldID="orderName" />
+                )}
+                <Button
+                  onClick={handleFetch}
+                  loading={isLoading}
+                  variant="primary"
+                >
+                  Fetch Order
+                </Button>
+                {isLoading && (
+                  <Spinner
+                    accessibilityLabel="Loading order details"
+                    size="small"
+                  />
+                )}
+              </BlockStack>
+            </Box>
           </Card>
         </Layout.Section>
 
         <Layout.Section>
-          {showDetails && data?.orderExportData && (
-            <Card
-              sectioned
-              title={`Export for Invoice: ${data.orderExportData.name}`}
-            >
-              <BlockStack gap="400">
-                <Banner
-                  status="success"
-                  title="Order loaded and ready for export."
-                />
-                <Text as="h3" variant="headingMd">
-                  Invoice:{" "}
-                  <Text as="span" fontWeight="bold">
-                    {data.orderExportData.name}
-                  </Text>
-                </Text>
-                <Text as="h3" variant="headingMd">
-                  Customer:{" "}
-                  <Text as="span" fontWeight="bold">
-                    {data.orderExportData.customer}
-                  </Text>
-                </Text>
-                <Text as="p">
-                  Created At:{" "}
-                  {new Date(data.orderExportData.createdAt).toLocaleString()}
-                </Text>
-                {data.orderExportData.poNumber && (
-                  <Text as="p">
-                    <strong>PO Number:</strong> {data.orderExportData.poNumber}
-                  </Text>
-                )}
-                <Button
-                  onClick={() =>
-                    downloadCSVFile(
-                      invoiceCSVHeaders,
-                      getInvoiceCSVRows(data.orderExportData),
-                      `${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber?.trim() ? `-${sanitizeFilename(data.orderExportData.poNumber?.trim())}` : ""}-invoice.csv`,
-                    )
-                  }
-                  size="medium"
-                >
-                  Download Invoice CSV
-                </Button>
-                <Button
-                  onClick={() =>
-                    downloadCSVFile(
-                      productsCSVHeaders,
-                      getProductsCSVRows(data.orderExportData),
-                      `${sanitizeFilename(data.orderExportData.customer)}-${sanitizeFilename(data.orderExportData.name)}${data.orderExportData.poNumber?.trim() ? `-${sanitizeFilename(data.orderExportData.poNumber?.trim())}` : ""}-products.csv`,
-                    )
-                  }
-                  size="medium"
-                >
-                  Download Products CSV
-                </Button>
-                <Text as="h3" variant="headingMd">
-                  Line Items
-                </Text>
-                <BlockStack as="ul" gap="100">
-                  {data.orderExportData.lineItems.map((item, idx) => (
-                    <li key={idx}>
-                      <Text as="span">
-                        {item.quantity != item.currentQuantity && (
-                          <em>
-                            <s>{item.quantity}</s>&nbsp;
-                          </em>
-                        )}
-                        {item.currentQuantity} x {item.title} @
-                        <s>${item.rate.toFixed(2)}</s>&nbsp;$
-                        {(Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2)} = $
-                        {(
-                          item.currentQuantity *
-                          (Math.round(item.rate / 2 / 0.5) * 0.5)
-                        ).toFixed(2)}
-                      </Text>
-                    </li>
-                  ))}
-                  {data.orderExportData.lineItems.length === 0 && (
-                    <Text as="p">No line items found for this order.</Text>
-                  )}
-                </BlockStack>
-              </BlockStack>
-              <Card title="4×6 Carton Labels" sectioned>
+          {showDetails && orderData && (
+            <Card>
+              <Box padding="400">
                 <BlockStack gap="400">
+                  <Text as="h3" variant="headingMd">
+                    Export for Invoice: <strong>{orderData.name}</strong>
+                  </Text>
+
+                  <Banner tone="success">
+                    <Text as="p" variant="bodyMd" fontWeight="bold">
+                      Order loaded and ready for export.
+                    </Text>
+                  </Banner>
+
+                  <Text as="h3" variant="headingMd">
+                    Invoice:{" "}
+                    <Text as="span" fontWeight="bold">
+                      {orderData.name}
+                    </Text>
+                  </Text>
+                  <Text as="h3" variant="headingMd">
+                    Customer:{" "}
+                    <Text as="span" fontWeight="bold">
+                      {orderData.customer}
+                    </Text>
+                  </Text>
+                  <Text as="p">
+                    Created At: {new Date(orderData.createdAt).toLocaleString()}
+                  </Text>
+                  {orderData.poNumber && (
+                    <Text as="p">
+                      <strong>PO Number:</strong> {orderData.poNumber}
+                    </Text>
+                  )}
+
+                  <BlockStack gap="200" inlineAlign="start">
+                    <Button
+                      onClick={() =>
+                        downloadCSVFile(
+                          invoiceCSVHeaders,
+                          getInvoiceCSVRows(orderData),
+                          `${sanitizeFilename(orderData.customer)}-${sanitizeFilename(orderData.name)}${
+                            orderData.poNumber?.trim()
+                              ? `-${sanitizeFilename(orderData.poNumber?.trim())}`
+                              : ""
+                          }-invoice.csv`,
+                        )
+                      }
+                      size="medium"
+                    >
+                      Download Invoice CSV
+                    </Button>
+
+                    <Button
+                      onClick={() =>
+                        downloadCSVFile(
+                          productsCSVHeaders,
+                          getProductsCSVRows(orderData),
+                          `${sanitizeFilename(orderData.customer)}-${sanitizeFilename(orderData.name)}${
+                            orderData.poNumber?.trim()
+                              ? `-${sanitizeFilename(orderData.poNumber?.trim())}`
+                              : ""
+                          }-products.csv`,
+                        )
+                      }
+                      size="medium"
+                    >
+                      Download Products CSV
+                    </Button>
+                  </BlockStack>
+
+                  <Text as="h3" variant="headingMd">
+                    Line Items
+                  </Text>
+
+                  <DataTable
+                    columnContentTypes={[
+                      "text", // Qty (ReactNode)
+                      "text", // Product
+                      "text", // SKU
+                      "text", // Category
+                      "text", // MSRP (ReactNode)
+                      "text", // Discount
+                      "text", // WS Cost
+                      "text", // Total
+                    ]}
+                    headings={[
+                      "Qty",
+                      "Product",
+                      "SKU",
+                      "Category",
+                      "MSRP",
+                      "Discount",
+                      "WS Cost",
+                      "Total",
+                    ]}
+                    rows={rowsForDataTable}
+                    sortable={[true, true, true, true, true, false, true, true]}
+                    defaultSortDirection="ascending"
+                    initialSortColumnIndex={0}
+                    onSort={handleSort}
+                  />
+                </BlockStack>
+              </Box>
+
+              <Box padding="400">
+                <BlockStack gap="400">
+                  <Text as="h3" variant="headingMd">
+                    4×6 Carton Labels
+                  </Text>
+
                   <TextField
                     label="Number of cartons (X)"
                     type="number"
-                    min={1}
+                    min="1"
                     value={String(cartonCount)}
                     onChange={(v) =>
                       setCartonCount(Math.max(1, Number(v) || 1))
                     }
                     autoComplete="off"
                   />
-                  <Button onClick={onPrintLabels} primary>
-                    Print {cartonCount} Label{cartonCount > 1 ? "s" : ""}
-                  </Button>
 
-                  {/* On-screen preview
-                  <div className="label-preview-grid">
-                    {Array.from({ length: cartonCount }, (_, i) => (
-                      <div className="label-4x6" key={`p-${i}`}>
-                        <div className="label-inner">
-                          <div className="row">
-                            <div className="k">Invoice:</div>
-                            <div className="v">{orderLabel}</div>
-                          </div>
-                          {poFromOrder && (
-                            <div className="row">
-                              <div className="k">PO#:</div>
-                              <div className="v">{poFromOrder}</div>
-                            </div>
-                          )}
-                          <div className="count">
-                            {i + 1} of {cartonCount}
-                          </div>
-                          <div className="mixed">MIXED CARTON</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div> */}
+                  <Button onClick={onPrintLabels} variant="primary">
+                    Print {String(cartonCount)} Label
+                    {cartonCount > 1 ? "s" : ""}
+                  </Button>
 
                   {/* Print-only container (revealed by @media print) */}
                   <div ref={printRef} style={{ display: "none" }}>
@@ -412,14 +589,17 @@ export default function OrderExportRoute() {
                     ))}
                   </div>
                 </BlockStack>
-              </Card>
+              </Box>
             </Card>
           )}
-          {data?.error && (
-            <Card sectioned>
-              <Banner status="critical" title="Error">
-                {data.error}
-              </Banner>
+
+          {actionError && (
+            <Card>
+              <Box padding="400">
+                <Banner tone="critical">
+                  <Text as="p">{actionError}</Text>
+                </Banner>
+              </Box>
             </Card>
           )}
         </Layout.Section>
