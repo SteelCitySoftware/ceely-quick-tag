@@ -115,11 +115,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       ? (order.lineItems.edges as Array<{ node: GqlLineItemNode }>).map(
           ({ node }) => ({
             title:
-              node?.variantTitle &&
-              node.variantTitle !== "Default Title" &&
-              node.variantTitle !== ""
+              node?.variant?.title &&
+              node.variant.title !== "Default Title" &&
+              node.variant.title !== ""
                 ? node.variantTitle
-                : (node.title ?? node.variant?.title ?? node.title ?? ""),
+                : (node.title ?? node.variant?.product?.title ?? ""),
             quantity: node.quantity,
             currentQuantity: node.currentQuantity,
             rate: parseFloat(
