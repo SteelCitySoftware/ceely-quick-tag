@@ -17,6 +17,7 @@ export const getOrderByQuery = `#graphql
             edges {
               node {
                 title
+                variantTitle
                 quantity
                 currentQuantity
                 originalUnitPriceSet {
@@ -26,6 +27,8 @@ export const getOrderByQuery = `#graphql
                   title
                   sku
                   product {
+                    title
+                    hasOnlyDefaultVariant
                     productType
                   }
                 }
@@ -50,6 +53,7 @@ export const getOrderByQuery = `#graphql
                         id
                         lineItem {
                           title
+                          variantTitle
                           quantity
                           currentQuantity
                           originalUnitPriceSet {
@@ -60,6 +64,8 @@ export const getOrderByQuery = `#graphql
                           variant {
                             sku
                             product {
+                              title
+                              hasOnlyDefaultVariant
                               productType
                             }
                           }

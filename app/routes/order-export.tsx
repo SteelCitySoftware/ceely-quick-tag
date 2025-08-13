@@ -52,6 +52,7 @@ type LoaderData = { orderName: string | null; orderId: string | null };
 // GraphQL node type used when mapping edges
 type GqlLineItemNode = {
   title: string;
+  variantTitle: string;
   quantity: number;
   currentQuantity: number;
   originalUnitPriceSet?: {
@@ -114,10 +115,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       ? (order.lineItems.edges as Array<{ node: GqlLineItemNode }>).map(
           ({ node }) => ({
             title:
-              node?.variant?.title ??
-              node.variant?.product?.title ??
-              node.title ??
-              "",
+              node?.variantTitle &&
+              node.variantTitle !== "Default Title" &&
+              node.variantTitle !== ""
+                ? node.variantTitle
+                : (node.title ?? node.variant?.title ?? node.title ?? ""),
             quantity: node.quantity,
             currentQuantity: node.currentQuantity,
             rate: parseFloat(
