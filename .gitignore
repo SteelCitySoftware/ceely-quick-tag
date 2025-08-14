@@ -31,3 +31,4 @@ prisma/schema.prisma
 .vercel
 .env*.local
 prisma/schema.prisma
+/prisma
