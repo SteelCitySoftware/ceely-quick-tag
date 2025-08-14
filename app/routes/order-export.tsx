@@ -388,20 +388,42 @@ export default function OrderExportRoute() {
     return rows;
   }, [baseRows, sortColumnIndex, sortDirection]);
 
-  const rowsForDataTable = useMemo(
-    () =>
-      sortedRows.map((r) => [
-        r.qtyDisplay,
-        r.product,
-        r.sku,
-        r.category,
-        r.msrpDisplay,
-        r.discount,
-        r.wsPriceDisplay,
-        r.totalDisplay,
-      ]),
+  const subtotalValue = useMemo(
+    () => sortedRows.reduce((sum, row) => sum + row.totalValue, 0),
     [sortedRows],
   );
+
+  const totalQtyValue = useMemo(
+    () => sortedRows.reduce((sum, row) => sum + row.qtyValue, 0),
+    [sortedRows],
+  );
+
+  const rowsForDataTable = useMemo(() => {
+    const tableRows = sortedRows.map((r) => [
+      r.qtyDisplay,
+      r.product,
+      r.sku,
+      r.category,
+      r.msrpDisplay,
+      r.discount,
+      r.wsPriceDisplay,
+      r.totalDisplay,
+    ]);
+
+    // Summary row always last
+    tableRows.push([
+      <strong>{totalQtyValue}</strong>, // Qty column
+      <strong>Subtotal</strong>, // Product
+      "", // SKU
+      "", // Category
+      "", // MSRP
+      "", // Discount
+      "", // Ws Price
+      <strong>${subtotalValue.toFixed(2)}</strong>, // Total column
+    ]);
+
+    return tableRows;
+  }, [sortedRows, subtotalValue, totalQtyValue]);
 
   const handleSort = useCallback(
     (columnIndex: number, direction: "ascending" | "descending") => {
