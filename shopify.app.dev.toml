@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "a2578056afc72f5aec95bf05808e9b36"
-application_url = "https://ceely-quick-tag.vercel.app/"
+application_url = "https://comply-surplus-opinions-vg.trycloudflare.com"
 embedded = true
 name = "ceely-quick-tag"
 handle = "ceely-quick-tag"
@@ -19,19 +19,19 @@ api_version = "2025-01"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_locations,read_inventory,write_locations,write_inventory,write_products,read_orders,write_orders,read_customers"
+scopes = "read_locations,read_inventory,write_locations,write_inventory,write_products,read_orders,write_orders,read_customers,read_merchant_managed_fulfillment_orders"
 
 [auth]
 redirect_urls = [
-  "https://ceely-quick-tag.vercel.app/auth/callback",
-  "https://ceely-quick-tag.vercel.app/auth/shopify/callback",
-  "https://ceely-quick-tag.vercel.app/api/auth/callback"
+  "https://comply-surplus-opinions-vg.trycloudflare.com/auth/callback",
+  "https://comply-surplus-opinions-vg.trycloudflare.com/auth/shopify/callback",
+  "https://comply-surplus-opinions-vg.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
 embedded = false
 
 [build]
-dev_store_url = "brutus-monroe.myshopify.com"
+dev_store_url = "ceely-software-dev.myshopify.com"
 automatically_update_urls_on_dev = true
 include_config_on_deploy = true

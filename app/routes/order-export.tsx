@@ -26,6 +26,7 @@ import {
   productsCSVHeaders,
   sanitizeFilename,
 } from "../utils/csvExport";
+import { pickCoordinatingCategory } from "../utils/orderExportHelpers";
 import { getOrderByQuery } from "./order-export.query";
 
 // ------------------ Types ------------------
@@ -34,6 +35,7 @@ type LineItem = {
   quantity: number;
   currentQuantity: number;
   rate: number;
+  wsPrice: any;
   sku: string;
   category: string;
 };
@@ -61,6 +63,8 @@ type GqlLineItemNode = {
   variant?: {
     title?: string | null;
     sku?: string | null;
+    price?: string | null;
+    compareAtPrice?: string | null;
     product?: {
       title?: string | null;
       productType?: string | null;
@@ -113,22 +117,45 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const lineItems: LineItem[] = Array.isArray(order.lineItems?.edges)
       ? (order.lineItems.edges as Array<{ node: GqlLineItemNode }>).map(
-          ({ node }) => ({
-            title: node?.title?.endsWith("Coordinating Products")
+          ({ node }) => {
+            const isCoordinating = node?.title?.endsWith(
+              "Coordinating Products",
+            );
+
+            const title = isCoordinating
               ? node.variantTitle
               : node?.variant?.title &&
                   node.variant.title !== "Default Title" &&
                   node.variant.title !== ""
-                ? node.title + " - " + node.variantTitle
-                : node.title,
-            quantity: node.quantity,
-            currentQuantity: node.currentQuantity,
-            rate: parseFloat(
-              node.originalUnitPriceSet?.shopMoney?.amount ?? "0",
-            ),
-            sku: node.variant?.sku ?? "",
-            category: node.variant?.product?.productType ?? "",
-          }),
+                ? `${node.title} - ${node.variantTitle}`
+                : node.title;
+
+            const category = isCoordinating
+              ? (pickCoordinatingCategory(node.variantTitle) ??
+                node.variant?.product?.productType ??
+                "")
+              : (node.variant?.product?.productType ?? "");
+
+            // Price selection logic
+            const price = parseFloat(node.variant?.price ?? "0");
+            const compareAtPrice = parseFloat(
+              node.variant?.compareAtPrice ?? "0",
+            );
+            const rate = compareAtPrice > price ? compareAtPrice : price;
+
+            // Precompute wholesale price (50% off, rounded to nearest $0.50)
+            const wsPrice = Math.round(rate / 2 / 0.5) * 0.5;
+
+            return {
+              title,
+              quantity: node.quantity,
+              currentQuantity: node.currentQuantity,
+              rate,
+              wsPrice,
+              sku: node.variant?.sku ?? "",
+              category,
+            };
+          },
         )
       : [];
 
@@ -285,12 +312,6 @@ export default function OrderExportRoute() {
     "ascending" | "descending"
   >("ascending");
 
-  // 50% rounded to nearest $0.50
-  const wsPriceCalc = useCallback(
-    (rate: number) => Math.round(rate / 2 / 0.5) * 0.5,
-    [],
-  );
-
   type RowModel = {
     qtyDisplay: ReactNode; // with strike logic
     qtyValue: number; // for sorting
@@ -309,8 +330,7 @@ export default function OrderExportRoute() {
   const baseRows: RowModel[] = useMemo(() => {
     const items = orderData?.lineItems || [];
     return items.map((item: LineItem) => {
-      const ws = wsPriceCalc(item.rate);
-      const total = item.currentQuantity * ws;
+      const total = item.currentQuantity * item.wsPrice;
       return {
         qtyDisplay:
           item.quantity !== item.currentQuantity ? (
@@ -330,13 +350,13 @@ export default function OrderExportRoute() {
         msrpDisplay: <s>${item.rate.toFixed(2)}</s>,
         msrpValue: Number(item.rate) || 0,
         discount: "50%",
-        wsPriceDisplay: `$${ws.toFixed(2)}`,
-        wsPriceValue: ws,
+        wsPriceDisplay: `$${item.wsPrice.toFixed(2)}`,
+        wsPriceValue: item.wsPrice,
         totalDisplay: `$${total.toFixed(2)}`,
         totalValue: total,
       };
     });
-  }, [orderData?.lineItems, wsPriceCalc]);
+  }, [orderData?.lineItems]);
 
   const sortedRows = useMemo(() => {
     const rows = [...baseRows];

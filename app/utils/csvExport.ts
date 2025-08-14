@@ -6,6 +6,7 @@ type LineItem = {
   quantity: number;
   currentQuantity: number;
   rate: number;
+  wsPrice: number;
   sku: string;
   category: string;
 };
@@ -128,9 +129,8 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
     const sanitizedSku = sanitizeQBOText(item.sku || "");
 
     const today = new Date().toLocaleDateString("en-US");
-    const halfRateRoundedTo0_5 = Math.round(item.rate / 2 / 0.5) * 0.5; // number
-    const itemRateStr = halfRateRoundedTo0_5.toFixed(2);                // string
-    const itemAmountStr = (item.currentQuantity * halfRateRoundedTo0_5).toFixed(2); // string
+    const itemRateStr =item.wsPrice.toFixed(2);                // string
+    const itemAmountStr = (item.currentQuantity * item.wsPrice).toFixed(2); // string 
 
     return [
       order.name,                       // InvoiceNo (string)
