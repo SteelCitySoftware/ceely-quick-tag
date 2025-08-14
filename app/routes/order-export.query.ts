@@ -1,73 +1,78 @@
 // GraphQL query for fetching a Shopify order by query string (order id or name)
 export const getOrderByQuery = `#graphql
   query getOrderByQuery($query: String!) {
-    orders(first: 1, query: $query) {
-      edges {
-        node {
-          id
-          name
-          customer {
-            displayName
-            quickbooksName: metafield(namespace: "custom", key: "quickbooks_name") {
-              value
-            }
+  orders(first: 1, query: $query) {
+    edges {
+      node {
+        id
+        name
+        customer {
+          displayName
+          quickbooksName: metafield(namespace: "custom", key: "quickbooks_name") {
+            value
           }
-          createdAt
-          lineItems(first: 100) {
-            edges {
-              node {
-                title
-                variantTitle
-                quantity
-                currentQuantity
-                originalUnitPriceSet {
-                  shopMoney { amount }
+        }
+        createdAt
+        lineItems(first: 100) {
+          edges {
+            node {
+              title
+              variantTitle
+              quantity
+              currentQuantity
+              originalUnitPriceSet {
+                shopMoney {
+                  amount
                 }
-                variant {
+              }
+              variant {
+                title
+                sku
+                price
+                compareAtPrice
+                product {
                   title
-                  sku
-                  product {
-                    title
-                    hasOnlyDefaultVariant
-                    productType
-                  }
+                  hasOnlyDefaultVariant
+                  productType
                 }
               }
             }
           }
-          fulfillments {
-            id
-            status
-            name
-            trackingInfo {
-              company
-              number
-              url
-            }
-            fulfillmentOrders(first: 10) {
-              edges {
-                node {
-                  lineItems(first: 250) {
-                    edges {
-                      node {
-                        id
-                        lineItem {
-                          title
-                          variantTitle
-                          quantity
-                          currentQuantity
-                          originalUnitPriceSet {
-                            shopMoney {
-                              amount
-                            }
+        }
+        fulfillments {
+          id
+          status
+          name
+          trackingInfo {
+            company
+            number
+            url
+          }
+          fulfillmentOrders(first: 10) {
+            edges {
+              node {
+                lineItems(first: 250) {
+                  edges {
+                    node {
+                      id
+                      lineItem {
+                        title
+                        variantTitle
+                        quantity
+                        currentQuantity
+                        originalUnitPriceSet {
+                          shopMoney {
+                            amount
                           }
-                          variant {
-                            sku
-                            product {
-                              title
-                              hasOnlyDefaultVariant
-                              productType
-                            }
+                        }
+                        variant {
+                          sku
+                          price
+                          compareAtPrice
+                          product {
+                            title
+                            hasOnlyDefaultVariant
+                            productType
                           }
                         }
                       }
@@ -77,11 +82,12 @@ export const getOrderByQuery = `#graphql
               }
             }
           }
-          customerPONumber: metafield(namespace: "custom", key: "customer_po_number") {
-            value
-          }
+        }
+        customerPONumber: metafield(namespace: "custom", key: "customer_po_number") {
+          value
         }
       }
     }
   }
+}
 `;
