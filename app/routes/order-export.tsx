@@ -114,12 +114,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const lineItems: LineItem[] = Array.isArray(order.lineItems?.edges)
       ? (order.lineItems.edges as Array<{ node: GqlLineItemNode }>).map(
           ({ node }) => ({
-            title:
-              node?.variant?.title &&
-              node.variant.title !== "Default Title" &&
-              node.variant.title !== ""
-                ? node.variantTitle
-                : (node.title ?? node.variant?.product?.title ?? ""),
+            title: node?.title?.endsWith("Coordinating Products")
+              ? node.variantTitle
+              : node?.variant?.title &&
+                  node.variant.title !== "Default Title" &&
+                  node.variant.title !== ""
+                ? node.title + " - " + node.variantTitle
+                : node.title,
             quantity: node.quantity,
             currentQuantity: node.currentQuantity,
             rate: parseFloat(
