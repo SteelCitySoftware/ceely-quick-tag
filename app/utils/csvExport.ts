@@ -123,35 +123,41 @@ export function downloadCSVFile(headers: string[], rows: (string | number)[][], 
 /** Invoice CSV rows generator */
 export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][] {
   return order.lineItems.map(item => {
-    const sanitizedTitle = sanitizeQBOText(item.title || '');
-    const sanitizedCategory = sanitizeQBOText(item.category || '');
-    const sanitizedSku = sanitizeQBOText(item.sku || '');
-    
+    const sanitizedTitle = sanitizeQBOText(item.title || "");
+    const sanitizedCategory = sanitizeQBOText(item.category || "");
+    const sanitizedSku = sanitizeQBOText(item.sku || "");
+
+    const today = new Date().toLocaleDateString("en-US");
+    const halfRateRoundedTo0_5 = Math.round(item.rate / 2 / 0.5) * 0.5; // number
+    const itemRateStr = halfRateRoundedTo0_5.toFixed(2);                // string
+    const itemAmountStr = (item.currentQuantity * halfRateRoundedTo0_5).toFixed(2); // string
+
     return [
-      order.name, // InvoiceNo
-      order.customer, // Customer
-      new Date().toLocaleDateString("en-US"), // InvoiceDate
-      new Date().toLocaleDateString("en-US"), // DueDate
-      "Due on Receipt", // Terms
-      "", // Location
-      order.poNumber, // Memo
-      sanitizedTitle, // ProductName
-      `${sanitizedCategory}:${sanitizedTitle}`, // Item(Product/Service) - changed from colon to hyphen
-      sanitizedSku, // ItemDescription
-      item.currentQuantity, // ItemQuantity
-      (Math.round(item.rate / 2 / 0.5) * 0.5).toFixed(2), // ItemRate
-      (item.currentQuantity * (Math.round(item.rate / 2 / 0.5) * 0.5)).toFixed(2), // ItemAmount
-      "N", // Taxable
-      "", // TaxRate
-      "", // Shipping address
-      "FedEx", // Ship via
-      new Date().toLocaleDateString("en-US"), // Shipping date
-      "", // Tracking no
-      "", // Shipping Charge
-      "", // Service Date
+      order.name,                       // InvoiceNo (string)
+      order.customer,                   // Customer (string)
+      today,                            // InvoiceDate (string)
+      today,                            // DueDate (string)
+      "Due on Receipt",                 // Terms (string)
+      "",                               // Location (string)
+      order.poNumber ?? "",             // Memo (string, avoid undefined)
+      sanitizedTitle,                   // ProductName (string)
+      `${sanitizedCategory}:${sanitizedTitle}`, // Item(Product/Service) (string)
+      sanitizedSku,                     // ItemDescription (string)
+      item.currentQuantity,             // ItemQuantity (number)
+      itemRateStr,                      // ItemRate (string)
+      itemAmountStr,                    // ItemAmount (string)
+      "N",                              // Taxable (string)
+      "",                               // TaxRate (string)
+      "",                               // Shipping address (string)
+      "FedEx",                          // Ship via (string)
+      today,                            // Shipping date (string)
+      "",                               // Tracking no (string)
+      "",                               // Shipping Charge (string)
+      "",                               // Service Date (string)
     ];
   });
 }
+
 
 export const invoiceCSVHeaders = [
   "InvoiceNo",

@@ -1,10 +1,10 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "88f6b1b891090832ebade07bf9e2ff71"
+client_id = "a2578056afc72f5aec95bf05808e9b36"
 application_url = "https://ceely-quick-tag.vercel.app/"
 embedded = true
-name = "brutus-quick-tag"
-handle = "brutus-quick-tag"
+name = "ceely-quick-tag"
+handle = "ceely-quick-tag"
 
 [webhooks]
 api_version = "2025-01"
@@ -33,4 +33,5 @@ embedded = false
 
 [build]
 dev_store_url = "brutus-monroe.myshopify.com"
-automatically_update_urls_on_dev = false
+automatically_update_urls_on_dev = true
+include_config_on_deploy = true

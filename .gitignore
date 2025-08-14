@@ -28,3 +28,7 @@ prisma/test.db
 prisma/test.db-journal
 prisma/schema.prisma
 prisma/schema.prisma
+.vercel
+.env*.local
+prisma/schema.prisma
+/prisma
