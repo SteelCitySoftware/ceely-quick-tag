@@ -129,7 +129,6 @@ export function getInvoiceCSVRows(order: OrderExportData): (string | number)[][]
     const sanitizedSku = sanitizeQBOText(item.sku || "");
 
     const today = new Date().toLocaleDateString("en-US");
- //   const halfRateRoundedTo0_5 = Math.round(item.rate / 2 / 0.5) * 0.5; // number
     const itemRateStr =item.wsPrice.toFixed(2);                // string
     const itemAmountStr = (item.currentQuantity * item.wsPrice).toFixed(2); // string 
 
